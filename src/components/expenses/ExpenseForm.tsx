@@ -1,0 +1,481 @@
+import { useState, useEffect } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { format } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { CategoryIcon } from '@/components/categories/CategoryIcon';
+import { Category, ExpenseFormData, Expense } from '@/types/expense';
+import { useCategories, useTags } from '@/hooks/useExpenseData';
+import { addExpense, updateExpense, addCategory, getTagSuggestions } from '@/lib/db';
+import { CalendarIcon, Clock, Plus, X, ImagePlus, Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import { CategoryForm } from '@/components/categories/CategoryForm';
+import imageCompression from 'browser-image-compression';
+
+const expenseSchema = z.object({
+  value: z.number().positive('Must be positive').max(10000000, 'Maximum ₹1 Crore'),
+  category: z.string().min(1, 'Category required'),
+  description: z.string().optional(),
+  tags: z.array(z.string()).max(4, 'Maximum 4 tags'),
+  date: z.string(),
+  time: z.string(),
+  isAdhoc: z.boolean(),
+  attachment: z.string().optional(),
+});
+
+interface ExpenseFormProps {
+  expense?: Expense;
+  onSuccess?: () => void;
+  onCancel?: () => void;
+}
+
+export function ExpenseForm({ expense, onSuccess, onCancel }: ExpenseFormProps) {
+  const categories = useCategories();
+  const [tagInput, setTagInput] = useState('');
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
+  const [showCategoryDialog, setShowCategoryDialog] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | undefined>(expense?.attachment);
+  const { toast } = useToast();
+
+  const now = new Date();
+  const defaultValues: ExpenseFormData = expense
+    ? {
+        value: expense.value,
+        category: expense.category,
+        description: expense.description || '',
+        tags: expense.tags,
+        date: expense.date,
+        time: expense.time,
+        isAdhoc: expense.isAdhoc,
+        attachment: expense.attachment,
+      }
+    : {
+        value: 0,
+        category: '',
+        description: '',
+        tags: [],
+        date: format(now, 'yyyy-MM-dd'),
+        time: format(now, 'HH:mm'),
+        isAdhoc: false,
+        attachment: undefined,
+      };
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    watch,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<ExpenseFormData>({
+    resolver: zodResolver(expenseSchema),
+    defaultValues,
+  });
+
+  const tags = watch('tags');
+  const description = watch('description');
+
+  // Load tag suggestions
+  useEffect(() => {
+    getTagSuggestions(10).then(setTagSuggestions);
+  }, []);
+
+  // Filter suggestions based on description and input
+  const filteredSuggestions = tagSuggestions.filter(
+    (tag) =>
+      !tags.includes(tag) &&
+      (tag.toLowerCase().includes(tagInput.toLowerCase()) ||
+        (description && tag.toLowerCase().includes(description.toLowerCase())))
+  );
+
+  const addTag = (tag: string) => {
+    if (tags.length < 4 && !tags.includes(tag)) {
+      setValue('tags', [...tags, tag]);
+    }
+    setTagInput('');
+  };
+
+  const removeTag = (tag: string) => {
+    setValue('tags', tags.filter((t) => t !== tag));
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const options = {
+        maxSizeMB: 0.5,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+      };
+      const compressed = await imageCompression(file, options);
+      
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result as string;
+        setValue('attachment', base64);
+        setImagePreview(base64);
+      };
+      reader.readAsDataURL(compressed);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to compress image',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const removeImage = () => {
+    setValue('attachment', undefined);
+    setImagePreview(undefined);
+  };
+
+  const onSubmit = async (data: ExpenseFormData) => {
+    try {
+      if (expense) {
+        await updateExpense(expense.id, data);
+        toast({ title: 'Expense updated' });
+      } else {
+        await addExpense(data);
+        toast({ title: 'Expense added' });
+      }
+      onSuccess?.();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to save expense',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleCategoryCreated = (id: string) => {
+    setValue('category', id);
+    setShowCategoryDialog(false);
+  };
+
+  // Set default category if not set
+  useEffect(() => {
+    if (!expense && categories.length > 0 && !watch('category')) {
+      const othersCategory = categories.find((c) => c.name === 'Others');
+      if (othersCategory) {
+        setValue('category', othersCategory.id);
+      }
+    }
+  }, [categories, expense, setValue, watch]);
+
+  return (
+    <>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Value Input */}
+        <div className="space-y-2">
+          <Label htmlFor="value">Amount</Label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
+              ₹
+            </span>
+            <Input
+              id="value"
+              type="number"
+              step="0.01"
+              min="0"
+              max="10000000"
+              className="pl-8 text-lg font-semibold"
+              placeholder="0"
+              autoFocus
+              {...register('value', { valueAsNumber: true })}
+            />
+          </div>
+          {errors.value && (
+            <p className="text-sm text-destructive">{errors.value.message}</p>
+          )}
+        </div>
+
+        {/* Category Select */}
+        <div className="space-y-2">
+          <Label>Category</Label>
+          <Controller
+            control={control}
+            name="category"
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category">
+                    {field.value && categories.find((c) => c.id === field.value) && (
+                      <div className="flex items-center gap-2">
+                        <CategoryIcon
+                          icon={categories.find((c) => c.id === field.value)!.icon}
+                          color={categories.find((c) => c.id === field.value)!.color}
+                          size="sm"
+                        />
+                        <span>{categories.find((c) => c.id === field.value)!.name}</span>
+                      </div>
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      <div className="flex items-center gap-2">
+                        <CategoryIcon
+                          icon={category.icon}
+                          color={category.color}
+                          size="sm"
+                        />
+                        <span>{category.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                  <div className="border-t border-border mt-1 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowCategoryDialog(true)}
+                      className="flex items-center gap-2 w-full px-2 py-1.5 text-sm text-primary hover:bg-accent rounded"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Create New Category
+                    </button>
+                  </div>
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {errors.category && (
+            <p className="text-sm text-destructive">{errors.category.message}</p>
+          )}
+        </div>
+
+        {/* Description */}
+        <div className="space-y-2">
+          <Label htmlFor="description">Description (optional)</Label>
+          <Textarea
+            id="description"
+            placeholder="What was this expense for?"
+            className="resize-none"
+            rows={2}
+            {...register('description')}
+          />
+        </div>
+
+        {/* Tags */}
+        <div className="space-y-2">
+          <Label>Tags (max 4)</Label>
+          <div className="flex flex-wrap gap-2 mb-2">
+            {tags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-sm"
+              >
+                {tag}
+                <button
+                  type="button"
+                  onClick={() => removeTag(tag)}
+                  className="hover:bg-primary/20 rounded-full p-0.5"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+          {tags.length < 4 && (
+            <div className="flex gap-2">
+              <Input
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (tagInput.trim()) {
+                      addTag(tagInput.trim());
+                    }
+                  }
+                }}
+                placeholder="Add tag"
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => {
+                  if (tagInput.trim()) {
+                    addTag(tagInput.trim());
+                  }
+                }}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+          {filteredSuggestions.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {filteredSuggestions.slice(0, 5).map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => addTag(tag)}
+                  className="px-2 py-1 text-xs bg-muted hover:bg-muted/80 rounded-full transition-colors"
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Date & Time */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Date</Label>
+            <Controller
+              control={control}
+              name="date"
+              render={({ field }) => (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        !field.value && 'text-muted-foreground'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {field.value
+                        ? format(new Date(field.value), 'PP')
+                        : 'Pick a date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value ? new Date(field.value) : undefined}
+                      onSelect={(date) =>
+                        field.onChange(date ? format(date, 'yyyy-MM-dd') : '')
+                      }
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              )}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Time</Label>
+            <div className="relative">
+              <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input type="time" className="pl-10" {...register('time')} />
+            </div>
+          </div>
+        </div>
+
+        {/* Is Adhoc */}
+        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-xl">
+          <div className="space-y-0.5">
+            <Label htmlFor="isAdhoc" className="cursor-pointer">
+              Adhoc Expense
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Exclude from monthly analysis (vacations, big purchases)
+            </p>
+          </div>
+          <Controller
+            control={control}
+            name="isAdhoc"
+            render={({ field }) => (
+              <Switch
+                id="isAdhoc"
+                checked={field.value}
+                onCheckedChange={field.onChange}
+              />
+            )}
+          />
+        </div>
+
+        {/* Attachment */}
+        <div className="space-y-2">
+          <Label>Attachment (optional)</Label>
+          {imagePreview ? (
+            <div className="relative inline-block">
+              <img
+                src={imagePreview}
+                alt="Attachment preview"
+                className="h-24 w-24 object-cover rounded-xl"
+              />
+              <button
+                type="button"
+                onClick={removeImage}
+                className="absolute -top-2 -right-2 p-1 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
+          ) : (
+            <label className="flex items-center justify-center h-24 w-24 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary/50 transition-colors">
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageUpload}
+              />
+              <ImagePlus className="h-6 w-6 text-muted-foreground" />
+            </label>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3 pt-4">
+          {onCancel && (
+            <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>
+              Cancel
+            </Button>
+          )}
+          <Button type="submit" className="flex-1" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving...' : expense ? 'Update' : 'Save'}
+          </Button>
+        </div>
+      </form>
+
+      <Dialog open={showCategoryDialog} onOpenChange={setShowCategoryDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Category</DialogTitle>
+          </DialogHeader>
+          <CategoryForm
+            onSuccess={handleCategoryCreated}
+            onCancel={() => setShowCategoryDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
