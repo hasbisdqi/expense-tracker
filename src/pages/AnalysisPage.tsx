@@ -1,18 +1,13 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { Download, TrendingUp, Wallet, Receipt, Award, CalendarIcon } from 'lucide-react';
+import { Download, TrendingUp, Wallet, Receipt, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import {
   Dialog,
   DialogContent,
@@ -25,6 +20,28 @@ import { exportAllData } from '@/lib/db';
 import { TimePeriod, ExpenseFilters, DateRange } from '@/types/expense';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+
+// Custom tooltip for pie chart
+const CustomPieTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0];
+    const percentage = ((data.value / data.payload.total) * 100).toFixed(1);
+    return (
+      <div
+        className="px-3 py-2 rounded-lg shadow-lg border"
+        style={{
+          backgroundColor: data.payload.color,
+          borderColor: data.payload.color,
+        }}
+      >
+        <p className="font-medium text-white">{data.name}</p>
+        <p className="text-white/90">₹{data.value.toLocaleString('en-IN')}</p>
+        <p className="text-white/80 text-sm">{percentage}%</p>
+      </div>
+    );
+  }
+  return null;
+};
 
 export default function AnalysisPage() {
   const { toast } = useToast();
@@ -110,10 +127,14 @@ export default function AnalysisPage() {
     }
   };
 
+  const totalForPie = summary.categoryBreakdown.reduce((sum, cat) => sum + cat.total, 0);
+  
   const pieData = summary.categoryBreakdown.map((cat) => ({
     name: cat.categoryName,
     value: cat.total,
     color: cat.categoryColor,
+    total: totalForPie,
+    percentage: totalForPie > 0 ? ((cat.total / totalForPie) * 100).toFixed(1) : '0',
   }));
 
   const barData = summary.dailyTrend.map((day) => ({
@@ -154,38 +175,24 @@ export default function AnalysisPage() {
 
         {timePeriod === 'custom' && (
           <div className="flex gap-2">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="flex-1 justify-start">
-                  <CalendarIcon className="h-4 w-4 mr-2" />
-                  {customRange?.start ? format(customRange.start, 'PP') : 'Start date'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={customRange?.start}
-                  onSelect={(date) => date && setCustomRange((prev) => ({ start: date, end: prev?.end || date }))}
-                  className="pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="flex-1 justify-start">
-                  <CalendarIcon className="h-4 w-4 mr-2" />
-                  {customRange?.end ? format(customRange.end, 'PP') : 'End date'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={customRange?.end}
-                  onSelect={(date) => date && setCustomRange((prev) => ({ start: prev?.start || date, end: date }))}
-                  className="pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
+            <Input
+              type="date"
+              value={customRange?.start ? format(customRange.start, 'yyyy-MM-dd') : ''}
+              onChange={(e) => {
+                const date = e.target.value ? parseISO(e.target.value) : undefined;
+                if (date) setCustomRange((prev) => ({ start: date, end: prev?.end || date }));
+              }}
+              className="flex-1"
+            />
+            <Input
+              type="date"
+              value={customRange?.end ? format(customRange.end, 'yyyy-MM-dd') : ''}
+              onChange={(e) => {
+                const date = e.target.value ? parseISO(e.target.value) : undefined;
+                if (date) setCustomRange((prev) => ({ start: prev?.start || date, end: date }));
+              }}
+              className="flex-1"
+            />
           </div>
         )}
 
@@ -285,19 +292,14 @@ export default function AnalysisPage() {
                     outerRadius={80}
                     paddingAngle={2}
                     dataKey="value"
+                    label={({ payload }) => `${payload.percentage}%`}
+                    labelLine={false}
                   >
                     {pieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip
-                    formatter={(value: number) => [`₹${value.toLocaleString('en-IN')}`, 'Amount']}
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '0.5rem',
-                    }}
-                  />
+                  <Tooltip content={<CustomPieTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -313,7 +315,10 @@ export default function AnalysisPage() {
                     />
                     <span className="truncate">{cat.categoryName}</span>
                   </div>
-                  <span className="text-muted-foreground">{cat.percentage.toFixed(1)}%</span>
+                  <div className="flex items-center gap-3">
+                    <span className="font-medium">₹{cat.total.toLocaleString('en-IN')}</span>
+                    <span className="text-muted-foreground w-12 text-right">{cat.percentage.toFixed(1)}%</span>
+                  </div>
                 </div>
               ))}
             </div>

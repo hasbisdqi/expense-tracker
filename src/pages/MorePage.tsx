@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { Palette, Database, Info, AlertTriangle } from "lucide-react";
 import { ThemeSelector } from "@/components/more/ThemeSelector";
 import { ExportData } from "@/components/more/ExportData";
 import { ImportData } from "@/components/more/ImportData";
@@ -24,7 +25,8 @@ export default function MorePage() {
         {/* Appearance */}
         <div className="p-4 rounded-xl bg-card border border-border/50 space-y-4">
           <h2 className="font-medium flex items-center gap-2">
-            🎨 Appearance
+            <Palette className="h-4 w-4" />
+            Appearance
           </h2>
           <ThemeSelector />
         </div>
@@ -32,7 +34,8 @@ export default function MorePage() {
         {/* Data Management */}
         <div className="p-4 rounded-xl bg-card border border-border/50 space-y-4">
           <h2 className="font-medium flex items-center gap-2">
-            📤 Data Management
+            <Database className="h-4 w-4" />
+            Data Management
           </h2>
           <ExportData />
           <div className="border-t border-border pt-4">
@@ -43,7 +46,8 @@ export default function MorePage() {
         {/* About */}
         <div className="p-4 rounded-xl bg-card border border-border/50 space-y-4">
           <h2 className="font-medium flex items-center gap-2">
-            ℹ️ About
+            <Info className="h-4 w-4" />
+            About
           </h2>
           <AboutSection />
         </div>
@@ -51,7 +55,8 @@ export default function MorePage() {
         {/* Danger Zone */}
         <div className="p-4 rounded-xl bg-card border border-destructive/30 space-y-4">
           <h2 className="font-medium flex items-center gap-2 text-destructive">
-            ⚠️ Danger Zone
+            <AlertTriangle className="h-4 w-4" />
+            Danger Zone
           </h2>
           <FactoryReset />
         </div>

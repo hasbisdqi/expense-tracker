@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Trash2, Edit } from "lucide-react";
+import { Plus, Trash2, Edit, FolderOpen, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -108,8 +108,14 @@ export default function CategoriesPage() {
       >
         <Tabs defaultValue="categories" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="categories">📁 Categories</TabsTrigger>
-            <TabsTrigger value="tags">🏷️ Tags</TabsTrigger>
+            <TabsTrigger value="categories" className="flex items-center gap-2">
+              <FolderOpen className="h-4 w-4" />
+              Categories
+            </TabsTrigger>
+            <TabsTrigger value="tags" className="flex items-center gap-2">
+              <Tag className="h-4 w-4" />
+              Tags
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="categories" className="space-y-4">
