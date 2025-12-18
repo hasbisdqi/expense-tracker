@@ -1,14 +1,52 @@
 import { useNavigate, useParams } from "react-router";
 import { motion } from "framer-motion";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ExpenseForm } from "@/components/expenses/ExpenseForm";
 import { useExpense } from "@/hooks/useExpenseData";
+import { deleteExpense } from "@/lib/db";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function EditExpensePage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const expense = useExpense(id);
+  const { toast } = useToast();
+
+  const handleDelete = async () => {
+    if (!id) return;
+    
+    try {
+      await deleteExpense(id);
+      toast({ title: "Expense deleted" });
+      navigate("/");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete expense",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSuccess = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/");
+    }
+  };
 
   if (!expense) {
     return (
@@ -36,21 +74,48 @@ export default function EditExpensePage() {
         animate={{ opacity: 1, y: 0 }}
         className="space-y-6"
       >
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(-1)}
-            className="h-9 w-9"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-xl font-semibold">Edit Expense</h1>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(-1)}
+              className="h-9 w-9"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-xl font-semibold">Edit Expense</h1>
+          </div>
+
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:text-destructive">
+                <Trash2 className="h-5 w-5" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Expense?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete this expense? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  className="bg-destructive hover:bg-destructive/90"
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
 
         <ExpenseForm
           expense={expense}
-          onSuccess={() => navigate(-1)}
+          onSuccess={handleSuccess}
           onCancel={() => navigate(-1)}
         />
       </motion.div>

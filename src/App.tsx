@@ -14,6 +14,7 @@ import CategoriesPage from "./pages/CategoriesPage";
 import AnalysisPage from "./pages/AnalysisPage";
 import TransactionsPage from "./pages/TransactionsPage";
 import EditExpensePage from "./pages/EditExpensePage";
+import MorePage from "./pages/MorePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,7 +32,9 @@ function AppContent() {
         <Route path="/categories" element={<CategoriesPage />} />
         <Route path="/analysis" element={<AnalysisPage />} />
         <Route path="/transactions" element={<TransactionsPage />} />
+        <Route path="/expense/:id" element={<EditExpensePage />} />
         <Route path="/expense/:id/edit" element={<EditExpensePage />} />
+        <Route path="/more" element={<MorePage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AppLayout>
