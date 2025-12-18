@@ -1,5 +1,15 @@
-import { NavLink as RouterNavLink, useLocation, useNavigate } from "react-router";
-import { Home, FolderOpen, BarChart3, MoreHorizontal, Plus } from "lucide-react";
+import {
+  NavLink as RouterNavLink,
+  useLocation,
+  useNavigate,
+} from "react-router";
+import {
+  Home,
+  FolderOpen,
+  BarChart3,
+  MoreHorizontal,
+  Plus,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
@@ -18,26 +28,11 @@ const sidebarNavItems = [
   { path: "/more", icon: MoreHorizontal, label: "More" },
 ];
 
-export function FloatingActionButton() {
-  const navigate = useNavigate();
-
-  return (
-    <button
-      onClick={() => navigate("/add")}
-      className="fixed bottom-20 left-1/2 -translate-x-1/2 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl flex items-center justify-center transition-all duration-200 active:scale-95 z-50"
-      aria-label="Add expense"
-    >
-      <Plus className="h-6 w-6" />
-    </button>
-  );
-}
-
 export function BottomNav() {
   const location = useLocation();
 
   return (
     <>
-      <FloatingActionButton />
       <nav className="bottom-nav">
         {navItems.map((item) => {
           const isActive =

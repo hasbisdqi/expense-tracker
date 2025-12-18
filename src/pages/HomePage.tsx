@@ -26,6 +26,20 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Expense } from "@/types/expense";
 
+export function FloatingActionButton() {
+  const navigate = useNavigate();
+
+  return (
+    <button
+      onClick={() => navigate("/add")}
+      className="fixed bottom-20 left-1/2 -translate-x-1/2 w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center  z-50 fab"
+      aria-label="Add expense"
+    >
+      <Plus className="h-6 w-6" />
+    </button>
+  );
+}
+
 export default function HomePage() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -165,13 +179,7 @@ export default function HomePage() {
       </motion.div>
 
       {/* FAB */}
-      <button
-        onClick={() => navigate("/add")}
-        className="fab"
-        aria-label="Add expense"
-      >
-        <Plus className="h-6 w-6" />
-      </button>
+      <FloatingActionButton />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog
