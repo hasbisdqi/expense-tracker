@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
 import { motion } from "framer-motion";
-import { Plus, Trash2, Edit, AlertCircle } from "lucide-react";
+import { Plus, Trash2, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -28,19 +27,20 @@ import {
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CategoryIcon } from "@/components/categories/CategoryIcon";
 import { CategoryForm } from "@/components/categories/CategoryForm";
+import { TagTab } from "@/components/categories/TagTab";
 import {
   useCategories,
   useCategoryExpenseCounts,
 } from "@/hooks/useExpenseData";
-import { deleteCategory, getExpensesByCategory } from "@/lib/db";
+import { deleteCategory } from "@/lib/db";
 import { Category } from "@/types/expense";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 export default function CategoriesPage() {
-  const navigate = useNavigate();
   const { toast } = useToast();
   const categories = useCategories();
   const expenseCounts = useCategoryExpenseCounts();
@@ -97,66 +97,82 @@ export default function CategoriesPage() {
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between"
       >
-        <h1 className="text-xl font-semibold">Categories</h1>
-        <Button onClick={() => setShowCreateDialog(true)} size="sm">
-          <Plus className="h-4 w-4 mr-1" />
-          Add
-        </Button>
+        <h1 className="text-xl font-semibold">Categories & Tags</h1>
       </motion.div>
 
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1 }}
-        className="grid grid-cols-1 sm:grid-cols-2 gap-3"
       >
-        {categories.map((category, index) => (
-          <motion.div
-            key={category.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-            className={cn(
-              "p-4 rounded-xl bg-card border border-border/50",
-              "flex items-center gap-3",
-              "hover:border-primary/20 transition-colors"
-            )}
-          >
-            <CategoryIcon
-              icon={category.icon}
-              color={category.color}
-              size="lg"
-            />
+        <Tabs defaultValue="categories" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="categories">📁 Categories</TabsTrigger>
+            <TabsTrigger value="tags">🏷️ Tags</TabsTrigger>
+          </TabsList>
 
-            <div className="flex-1 min-w-0">
-              <p className="font-medium truncate">{category.name}</p>
-              <p className="text-sm text-muted-foreground">
-                {expenseCounts[category.id] || 0} expenses
-              </p>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setEditCategory(category)}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-destructive hover:text-destructive"
-                onClick={() => handleDeleteClick(category)}
-              >
-                <Trash2 className="h-4 w-4" />
+          <TabsContent value="categories" className="space-y-4">
+            <div className="flex justify-end">
+              <Button onClick={() => setShowCreateDialog(true)} size="sm">
+                <Plus className="h-4 w-4 mr-1" />
+                Add Category
               </Button>
             </div>
-          </motion.div>
-        ))}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {categories.map((category, index) => (
+                <motion.div
+                  key={category.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className={cn(
+                    "p-4 rounded-xl bg-card border border-border/50",
+                    "flex items-center gap-3",
+                    "hover:border-primary/20 transition-colors"
+                  )}
+                >
+                  <CategoryIcon
+                    icon={category.icon}
+                    color={category.color}
+                    size="lg"
+                  />
+
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{category.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {expenseCounts[category.id] || 0} expenses
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setEditCategory(category)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => handleDeleteClick(category)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="tags">
+            <TagTab />
+          </TabsContent>
+        </Tabs>
       </motion.div>
 
       {/* Create Dialog */}
