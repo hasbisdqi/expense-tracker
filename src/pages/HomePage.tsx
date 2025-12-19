@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Expense } from "@/types/expense";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export function FloatingActionButton() {
   const navigate = useNavigate();
@@ -45,6 +46,7 @@ export default function HomePage() {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
+  const isMobile = useIsMobile();
 
   const { total, totalExcludingAdhoc, monthStart, monthEnd } =
     useMonthSummary();
@@ -163,7 +165,7 @@ export default function HomePage() {
       </motion.div>
 
       {/* FAB */}
-      <FloatingActionButton />
+      {isMobile && <FloatingActionButton />}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog

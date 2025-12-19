@@ -1,9 +1,11 @@
-import { Github, Lock, Folder } from "lucide-react";
+import { Github, Lock, Folder, PiggyBank } from "lucide-react";
 
 export function AboutSection() {
   return (
     <div className="text-center space-y-3">
-      <div className="text-2xl">💰</div>
+      <div className="text-2xl">
+        <PiggyBank className="h-8 w-8 mx-auto mb-1" />
+      </div>
       <h3 className="text-base font-semibold">Expense Tracker</h3>
 
       <div className="text-xs text-muted-foreground space-y-0.5">
@@ -17,13 +19,13 @@ export function AboutSection() {
       </div>
 
       <a
-        href="https://github.com/gammaSpeck"
+        href="https://github.com/gammaSpeck/expense-tracker"
         target="_blank"
         rel="noopener noreferrer"
         className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline break-all"
       >
         <Github className="h-3 w-3" />
-        github.com/gammaSpeck
+        Open on GitHub
       </a>
 
       <div className="text-left pt-3 border-t border-border space-y-2 overflow-hidden">
