@@ -1,0 +1,28 @@
+# This is done only as a workaround to Netlify's branch based deploys
+name: Update Release
+run-name: Update latest release to ${{ github.ref_name }}
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  deploy_releases:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: release
+
+      # Point release branch at the latest tag so Netlify can deploy it
+      - name: Point release branch at tag
+        run: |
+          echo "Setting 'release' branch to 'tags/${{ github.ref_name }}'"
+          git reset --hard tags/${{ github.ref_name }}
+          git push -f origin release
