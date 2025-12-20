@@ -1,47 +1,55 @@
-import { useState, useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { format } from 'date-fns';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Calendar } from '@/components/ui/calendar';
+import { useState, useEffect } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover';
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { CategoryIcon } from '@/components/categories/CategoryIcon';
-import { Category, ExpenseFormData, Expense } from '@/types/expense';
-import { useCategories, useTags } from '@/hooks/useExpenseData';
-import { addExpense, updateExpense, addCategory, getTagSuggestions } from '@/lib/db';
-import { CalendarIcon, Clock, Plus, X, ImagePlus, Trash2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
-import { CategoryForm } from '@/components/categories/CategoryForm';
-import imageCompression from 'browser-image-compression';
+} from "@/components/ui/dialog";
+import { CategoryIcon } from "@/components/categories/CategoryIcon";
+import { Category, ExpenseFormData, Expense } from "@/types/expense";
+import { useCategories, useTags } from "@/hooks/useExpenseData";
+import {
+  addExpense,
+  updateExpense,
+  addCategory,
+  getTagSuggestions,
+} from "@/lib/db";
+import { CalendarIcon, Clock, Plus, X, ImagePlus, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { CategoryForm } from "@/components/categories/CategoryForm";
+import imageCompression from "browser-image-compression";
 
 const expenseSchema = z.object({
-  value: z.number().positive('Must be positive').max(10000000, 'Maximum ₹1 Crore'),
-  category: z.string().min(1, 'Category required'),
+  value: z
+    .number()
+    .positive("Must be positive")
+    .max(10000000, "Maximum ₹1 Crore"),
+  category: z.string().min(1, "Category required"),
   description: z.string().optional(),
-  tags: z.array(z.string()).max(4, 'Maximum 4 tags'),
+  tags: z.array(z.string()).max(4, "Maximum 4 tags"),
   date: z.string(),
   time: z.string(),
   isAdhoc: z.boolean(),
@@ -50,40 +58,54 @@ const expenseSchema = z.object({
 
 interface ExpenseFormProps {
   expense?: Expense;
+  duplicate?: Expense;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
 
-export function ExpenseForm({ expense, onSuccess, onCancel }: ExpenseFormProps) {
+function initDefaults(expense?: Expense, duplicate?: Expense): ExpenseFormData {
+  const now = new Date();
+  const state = expense ??
+    duplicate ?? {
+      value: 0,
+      category: "",
+      description: "",
+      tags: [],
+      date: format(now, "yyyy-MM-dd"),
+      time: format(now, "HH:mm"),
+      isAdhoc: false,
+      attachment: undefined,
+    };
+
+  return {
+    value: state.value,
+    category: state.category,
+    description: state.description || "",
+    tags: state.tags,
+    date: state.date,
+    time: state.time,
+    isAdhoc: state.isAdhoc,
+    attachment: state.attachment,
+  };
+}
+
+export function ExpenseForm({
+  expense,
+  duplicate,
+  onSuccess,
+  onCancel,
+}: ExpenseFormProps) {
   const categories = useCategories();
-  const [tagInput, setTagInput] = useState('');
+  const [tagInput, setTagInput] = useState("");
   const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | undefined>(expense?.attachment);
+  const [imagePreview, setImagePreview] = useState<string | undefined>(
+    expense?.attachment
+  );
   const { toast } = useToast();
 
   const now = new Date();
-  const defaultValues: ExpenseFormData = expense
-    ? {
-        value: expense.value,
-        category: expense.category,
-        description: expense.description || '',
-        tags: expense.tags,
-        date: expense.date,
-        time: expense.time,
-        isAdhoc: expense.isAdhoc,
-        attachment: expense.attachment,
-      }
-    : {
-        value: 0,
-        category: '',
-        description: '',
-        tags: [],
-        date: format(now, 'yyyy-MM-dd'),
-        time: format(now, 'HH:mm'),
-        isAdhoc: false,
-        attachment: undefined,
-      };
+  const defaultValues: ExpenseFormData = initDefaults(expense, duplicate);
 
   const {
     register,
@@ -97,8 +119,8 @@ export function ExpenseForm({ expense, onSuccess, onCancel }: ExpenseFormProps) 
     defaultValues,
   });
 
-  const tags = watch('tags');
-  const description = watch('description');
+  const tags = watch("tags");
+  const description = watch("description");
 
   // Load tag suggestions
   useEffect(() => {
@@ -115,13 +137,16 @@ export function ExpenseForm({ expense, onSuccess, onCancel }: ExpenseFormProps) 
 
   const addTag = (tag: string) => {
     if (tags.length < 4 && !tags.includes(tag)) {
-      setValue('tags', [...tags, tag]);
+      setValue("tags", [...tags, tag]);
     }
-    setTagInput('');
+    setTagInput("");
   };
 
   const removeTag = (tag: string) => {
-    setValue('tags', tags.filter((t) => t !== tag));
+    setValue(
+      "tags",
+      tags.filter((t) => t !== tag)
+    );
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -135,25 +160,25 @@ export function ExpenseForm({ expense, onSuccess, onCancel }: ExpenseFormProps) 
         useWebWorker: true,
       };
       const compressed = await imageCompression(file, options);
-      
+
       const reader = new FileReader();
       reader.onload = () => {
         const base64 = reader.result as string;
-        setValue('attachment', base64);
+        setValue("attachment", base64);
         setImagePreview(base64);
       };
       reader.readAsDataURL(compressed);
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to compress image',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to compress image",
+        variant: "destructive",
       });
     }
   };
 
   const removeImage = () => {
-    setValue('attachment', undefined);
+    setValue("attachment", undefined);
     setImagePreview(undefined);
   };
 
@@ -161,32 +186,33 @@ export function ExpenseForm({ expense, onSuccess, onCancel }: ExpenseFormProps) 
     try {
       if (expense) {
         await updateExpense(expense.id, data);
-        toast({ title: 'Expense updated' });
+        toast({ title: "Expense updated" });
+        return;
       } else {
         await addExpense(data);
-        toast({ title: 'Expense added' });
+        toast({ title: "Expense added" });
       }
       onSuccess?.();
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to save expense',
-        variant: 'destructive',
+        title: "Error",
+        description: "Failed to save expense",
+        variant: "destructive",
       });
     }
   };
 
   const handleCategoryCreated = (id: string) => {
-    setValue('category', id);
+    setValue("category", id);
     setShowCategoryDialog(false);
   };
 
   // Set default category if not set
   useEffect(() => {
-    if (!expense && categories.length > 0 && !watch('category')) {
-      const othersCategory = categories.find((c) => c.name === 'Others');
+    if (!expense && categories.length > 0 && !watch("category")) {
+      const othersCategory = categories.find((c) => c.name === "Others");
       if (othersCategory) {
-        setValue('category', othersCategory.id);
+        setValue("category", othersCategory.id);
       }
     }
   }, [categories, expense, setValue, watch]);
@@ -210,7 +236,7 @@ export function ExpenseForm({ expense, onSuccess, onCancel }: ExpenseFormProps) 
               className="pl-8 text-lg font-semibold"
               placeholder="0"
               autoFocus
-              {...register('value', { valueAsNumber: true })}
+              {...register("value", { valueAsNumber: true })}
             />
           </div>
           {errors.value && (
@@ -228,16 +254,24 @@ export function ExpenseForm({ expense, onSuccess, onCancel }: ExpenseFormProps) 
               <Select value={field.value} onValueChange={field.onChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select category">
-                    {field.value && categories.find((c) => c.id === field.value) && (
-                      <div className="flex items-center gap-2">
-                        <CategoryIcon
-                          icon={categories.find((c) => c.id === field.value)!.icon}
-                          color={categories.find((c) => c.id === field.value)!.color}
-                          size="sm"
-                        />
-                        <span>{categories.find((c) => c.id === field.value)!.name}</span>
-                      </div>
-                    )}
+                    {field.value &&
+                      categories.find((c) => c.id === field.value) && (
+                        <div className="flex items-center gap-2">
+                          <CategoryIcon
+                            icon={
+                              categories.find((c) => c.id === field.value)!.icon
+                            }
+                            color={
+                              categories.find((c) => c.id === field.value)!
+                                .color
+                            }
+                            size="sm"
+                          />
+                          <span>
+                            {categories.find((c) => c.id === field.value)!.name}
+                          </span>
+                        </div>
+                      )}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -268,7 +302,9 @@ export function ExpenseForm({ expense, onSuccess, onCancel }: ExpenseFormProps) 
             )}
           />
           {errors.category && (
-            <p className="text-sm text-destructive">{errors.category.message}</p>
+            <p className="text-sm text-destructive">
+              {errors.category.message}
+            </p>
           )}
         </div>
 
@@ -280,7 +316,7 @@ export function ExpenseForm({ expense, onSuccess, onCancel }: ExpenseFormProps) 
             placeholder="What was this expense for?"
             className="resize-none"
             rows={2}
-            {...register('description')}
+            {...register("description")}
           />
         </div>
 
@@ -310,7 +346,7 @@ export function ExpenseForm({ expense, onSuccess, onCancel }: ExpenseFormProps) 
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === "Enter") {
                     e.preventDefault();
                     if (tagInput.trim()) {
                       addTag(tagInput.trim());
@@ -363,14 +399,14 @@ export function ExpenseForm({ expense, onSuccess, onCancel }: ExpenseFormProps) 
                     <Button
                       variant="outline"
                       className={cn(
-                        'w-full justify-start text-left font-normal',
-                        !field.value && 'text-muted-foreground'
+                        "w-full justify-start text-left font-normal",
+                        !field.value && "text-muted-foreground"
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {field.value
-                        ? format(new Date(field.value), 'PP')
-                        : 'Pick a date'}
+                        ? format(new Date(field.value), "PP")
+                        : "Pick a date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -378,7 +414,7 @@ export function ExpenseForm({ expense, onSuccess, onCancel }: ExpenseFormProps) 
                       mode="single"
                       selected={field.value ? new Date(field.value) : undefined}
                       onSelect={(date) =>
-                        field.onChange(date ? format(date, 'yyyy-MM-dd') : '')
+                        field.onChange(date ? format(date, "yyyy-MM-dd") : "")
                       }
                       initialFocus
                       className="pointer-events-auto"
@@ -393,7 +429,7 @@ export function ExpenseForm({ expense, onSuccess, onCancel }: ExpenseFormProps) 
             <Label>Time</Label>
             <div className="relative">
               <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input type="time" className="pl-10" {...register('time')} />
+              <Input type="time" className="pl-10" {...register("time")} />
             </div>
           </div>
         </div>
@@ -455,12 +491,17 @@ export function ExpenseForm({ expense, onSuccess, onCancel }: ExpenseFormProps) 
         {/* Actions */}
         <div className="flex gap-3 pt-4">
           {onCancel && (
-            <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={onCancel}
+            >
               Cancel
             </Button>
           )}
           <Button type="submit" className="flex-1" disabled={isSubmitting}>
-            {isSubmitting ? 'Saving...' : expense ? 'Update' : 'Save'}
+            {isSubmitting ? "Saving..." : expense ? "Update" : "Save"}
           </Button>
         </div>
       </form>

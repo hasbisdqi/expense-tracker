@@ -3,11 +3,12 @@ import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ExpenseForm } from "@/components/expenses/ExpenseForm";
+import { Expense } from "@/types/expense";
 
 export default function AddExpensePage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const duplicateData = location.state?.duplicate;
+  const duplicateData = location.state?.duplicate as Expense;
 
   return (
     <div className="px-4 py-6 max-w-lg mx-auto">
@@ -25,13 +26,11 @@ export default function AddExpensePage() {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-semibold">
-            {duplicateData ? "Duplicate Expense" : "Add Expense"}
-          </h1>
+          <h1 className="text-xl font-semibold">Add Expense</h1>
         </div>
 
         <ExpenseForm
-          expense={duplicateData}
+          duplicate={duplicateData}
           onSuccess={() => navigate("/")}
           onCancel={() => navigate(-1)}
         />
