@@ -31,7 +31,7 @@ export interface TagMetadata {
 
 // Form types
 export interface ExpenseFormData {
-  value: number;
+  value: number | null;
   category: string;
   description?: string;
   tags: string[];
@@ -48,7 +48,7 @@ export interface CategoryFormData {
 }
 
 // Filter types
-export type TimePeriod = 'week' | 'month' | 'year' | 'custom';
+export type TimePeriod = "week" | "month" | "year" | "custom";
 
 export interface DateRange {
   start: Date;
@@ -91,7 +91,7 @@ export interface AnalysisSummary {
 }
 
 // Export types
-export type ExportFormat = 'csv' | 'json';
+export type ExportFormat = "csv" | "json";
 
 export interface ExportOptions {
   format: ExportFormat;
@@ -100,16 +100,16 @@ export interface ExportOptions {
 }
 
 // Theme types
-export type Theme = 'light' | 'dark' | 'system';
+export type Theme = "light" | "dark" | "system";
 
 // Navigation
-export type NavTab = 'home' | 'add' | 'categories' | 'analysis';
+export type NavTab = "home" | "add" | "categories" | "analysis";
 
 // Context menu for long press
 export interface ContextMenuAction {
   id: string;
   label: string;
   icon: string;
-  variant?: 'default' | 'destructive';
+  variant?: "default" | "destructive";
   onClick: () => void;
 }

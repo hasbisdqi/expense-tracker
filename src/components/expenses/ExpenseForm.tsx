@@ -44,7 +44,7 @@ import imageCompression from "browser-image-compression";
 
 const expenseSchema = z.object({
   value: z
-    .number()
+    .number({ error: "Amount is required" })
     .positive("Must be positive")
     .max(10000000, "Maximum ₹1 Crore"),
   category: z.string().min(1, "Category required"),
@@ -67,7 +67,7 @@ function initDefaults(expense?: Expense, duplicate?: Expense): ExpenseFormData {
   const now = new Date();
   const state = expense ??
     duplicate ?? {
-      value: 0,
+      value: null,
       category: "",
       description: "",
       tags: [],
@@ -340,6 +340,7 @@ export function ExpenseForm({
               </span>
             ))}
           </div>
+
           {tags.length < 4 && (
             <div className="flex gap-2">
               <Input
