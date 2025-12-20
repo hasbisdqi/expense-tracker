@@ -314,7 +314,7 @@ export function ExpenseForm({
           <Textarea
             id="description"
             placeholder="What was this expense for?"
-            className="resize-none"
+            className="resize-none text-sm"
             rows={2}
             {...register("description")}
           />
@@ -323,23 +323,25 @@ export function ExpenseForm({
         {/* Tags */}
         <div className="space-y-2">
           <Label>Tags (max 4)</Label>
-          <div className="flex flex-wrap gap-2 mb-2">
-            {tags.map((tag) => (
-              <span
-                key={tag}
-                className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-sm"
-              >
-                {tag}
-                <button
-                  type="button"
-                  onClick={() => removeTag(tag)}
-                  className="hover:bg-primary/20 rounded-full p-0.5"
+          {!!tags.length && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-primary/10 text-primary rounded-full text-xs"
                 >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            ))}
-          </div>
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => removeTag(tag)}
+                    className="hover:bg-primary/20 rounded-full p-0.5"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
 
           {tags.length < 4 && (
             <div className="flex gap-2">
@@ -355,7 +357,7 @@ export function ExpenseForm({
                   }
                 }}
                 placeholder="Add tag"
-                className="flex-1"
+                className="flex-1 text-sm"
               />
               <Button
                 type="button"
@@ -400,7 +402,7 @@ export function ExpenseForm({
                     <Button
                       variant="outline"
                       className={cn(
-                        "w-full justify-start text-left font-normal",
+                        "w-full justify-start text-left font-normal text-sm",
                         !field.value && "text-muted-foreground"
                       )}
                     >
@@ -430,7 +432,11 @@ export function ExpenseForm({
             <Label>Time</Label>
             <div className="relative">
               <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input type="time" className="pl-10" {...register("time")} />
+              <Input
+                type="time"
+                className="pl-10 text-sm"
+                {...register("time")}
+              />
             </div>
           </div>
         </div>
