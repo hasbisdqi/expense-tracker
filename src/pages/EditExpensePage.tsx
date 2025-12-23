@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ExpenseForm } from "@/components/expenses/ExpenseForm";
 import { useExpense } from "@/hooks/useExpenseData";
 import { deleteExpense } from "@/lib/db";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,21 +22,16 @@ export default function EditExpensePage() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const expense = useExpense(id);
-  const { toast } = useToast();
 
   const handleDelete = async () => {
     if (!id) return;
-    
+
     try {
       await deleteExpense(id);
-      toast({ title: "Expense deleted" });
+      toast.success("Expense deleted");
       navigate("/");
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete expense",
-        variant: "destructive",
-      });
+      toast.error("Failed to delete expense");
     }
   };
 
@@ -89,7 +84,11 @@ export default function EditExpensePage() {
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:text-destructive">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 text-destructive hover:text-destructive"
+              >
                 <Trash2 className="h-5 w-5" />
               </Button>
             </AlertDialogTrigger>
@@ -97,7 +96,8 @@ export default function EditExpensePage() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete Expense?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete this expense? This action cannot be undone.
+                  Are you sure you want to delete this expense? This action
+                  cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
