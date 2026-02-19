@@ -29,14 +29,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CategoryIcon } from "@/components/categories/CategoryIcon";
-import { Category, ExpenseFormData, Expense } from "@/types/expense";
-import { useCategories, useTags } from "@/hooks/useExpenseData";
-import {
-  addExpense,
-  updateExpense,
-  addCategory,
-  getTagSuggestions,
-} from "@/lib/db";
+import { ExpenseFormData, Expense } from "@/types/expense";
+import { useCategories } from "@/hooks/useExpenseData";
+import { addExpense, updateExpense, getTagSuggestions } from "@/lib/db";
 import { CalendarIcon, Clock, Plus, X, ImagePlus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CategoryForm } from "@/components/categories/CategoryForm";
@@ -102,10 +97,9 @@ export function ExpenseForm({
   const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | undefined>(
-    expense?.attachment
+    expense?.attachment,
   );
 
-  const now = new Date();
   const defaultValues: ExpenseFormData = initDefaults(expense, duplicate);
   const { currency } = useCurrency();
 
@@ -134,7 +128,7 @@ export function ExpenseForm({
     (tag) =>
       !tags.includes(tag) &&
       (tag.toLowerCase().includes(tagInput.toLowerCase()) ||
-        (description && tag.toLowerCase().includes(description.toLowerCase())))
+        (description && tag.toLowerCase().includes(description.toLowerCase()))),
   );
 
   const addTag = (tag: string) => {
@@ -147,7 +141,7 @@ export function ExpenseForm({
   const removeTag = (tag: string) => {
     setValue(
       "tags",
-      tags.filter((t) => t !== tag)
+      tags.filter((t) => t !== tag),
     );
   };
 
@@ -394,7 +388,7 @@ export function ExpenseForm({
                       variant="outline"
                       className={cn(
                         "w-full justify-start text-left font-normal text-sm",
-                        !field.value && "text-muted-foreground"
+                        !field.value && "text-muted-foreground",
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />

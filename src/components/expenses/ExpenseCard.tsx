@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, LazyMotion, domAnimation, m } from "framer-motion";
 import {
   format,
   formatDistanceToNow,
@@ -8,7 +8,7 @@ import {
   isYesterday,
 } from "date-fns";
 import { CategoryIcon } from "@/components/categories/CategoryIcon";
-import { Expense, Category, ContextMenuAction } from "@/types/expense";
+import { Expense, Category } from "@/types/expense";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { Paperclip, Copy, Edit, Trash2 } from "lucide-react";
@@ -39,7 +39,7 @@ export function ExpenseCard({
   showDate = true,
 }: ExpenseCardProps) {
   const [isLongPressing, setIsLongPressing] = useState(false);
-  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const formatRelativeDate = (dateStr: string) => {
     const date = parseISO(dateStr);
@@ -71,8 +71,12 @@ export function ExpenseCard({
   }, []);
 
   const cardContent = (
-    <div
-      className={cn("expense-card", isLongPressing && "long-press-active")}
+    <button
+      type="button"
+      className={cn(
+        "expense-card appearance-none text-left w-full",
+        isLongPressing && "long-press-active",
+      )}
       onClick={onClick}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
@@ -129,7 +133,7 @@ export function ExpenseCard({
           )}
         </div>
       </div>
-    </div>
+    </button>
   );
 
   return (
@@ -200,42 +204,47 @@ export function ExpenseList({
   if (!grouped) {
     return (
       <div className="space-y-2">
-        <AnimatePresence mode="popLayout">
-          {expenses.map((expense, index) => (
-            <motion.div
-              key={expense.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ delay: index * 0.02 }}
-            >
-              <ExpenseCard
-                expense={expense}
-                category={getCategoryById(expense.category)}
-                onClick={() => onExpenseClick?.(expense)}
-                onDuplicate={() => onDuplicate?.(expense)}
-                onEdit={() => onEdit?.(expense)}
-                onDelete={() => onDelete?.(expense)}
-              />
-            </motion.div>
-          ))}
-        </AnimatePresence>
+        <LazyMotion features={domAnimation}>
+          <AnimatePresence mode="popLayout">
+            {expenses.map((expense, index) => (
+              <m.div
+                key={expense.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ delay: index * 0.02 }}
+              >
+                <ExpenseCard
+                  expense={expense}
+                  category={getCategoryById(expense.category)}
+                  onClick={() => onExpenseClick?.(expense)}
+                  onDuplicate={() => onDuplicate?.(expense)}
+                  onEdit={() => onEdit?.(expense)}
+                  onDelete={() => onDelete?.(expense)}
+                />
+              </m.div>
+            ))}
+          </AnimatePresence>
+        </LazyMotion>
       </div>
     );
   }
 
   // Group by date
-  const grouped_expenses = expenses.reduce((acc, expense) => {
-    const date = expense.date;
-    if (!acc[date]) {
-      acc[date] = [];
-    }
-    acc[date].push(expense);
-    return acc;
-  }, {} as Record<string, Expense[]>);
+  const grouped_expenses = expenses.reduce(
+    (acc, expense) => {
+      const date = expense.date;
+      if (!acc[date]) {
+        acc[date] = [];
+      }
+      acc[date].push(expense);
+      return acc;
+    },
+    {} as Record<string, Expense[]>,
+  );
 
   const sortedDates = Object.keys(grouped_expenses).sort((a, b) =>
-    b.localeCompare(a)
+    b.localeCompare(a),
   );
 
   const getDateLabel = (dateStr: string) => {
