@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { format } from "date-fns";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -10,13 +11,27 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { exportAllData } from "@/lib/db";
+import { markBackupCompleted } from "@/lib/backupReminder";
 import { Expense, Category } from "@/types/expense";
 import { toast } from "sonner";
 
-export function ExportData() {
+interface ExportDataProps {
+  openOnMount?: boolean;
+}
+
+export function ExportData({ openOnMount = false }: ExportDataProps) {
   const [open, setOpen] = useState(false);
   const [formatType, setFormatType] = useState<"csv" | "json">("json");
   const [isExporting, setIsExporting] = useState(false);
+  const hasAutoOpenedRef = useRef(false);
+
+  useEffect(() => {
+    if (!openOnMount || hasAutoOpenedRef.current) return;
+
+    setFormatType("json");
+    setOpen(true);
+    hasAutoOpenedRef.current = true;
+  }, [openOnMount]);
 
   const resetForm = () => {
     setFormatType("json");
@@ -26,10 +41,11 @@ export function ExportData() {
     setIsExporting(true);
     try {
       const data = await exportAllData();
+      const dateToken = format(new Date(), "yyyy-MM-dd");
 
       if (formatType === "csv") {
         const csv = generateCSV(data.expenses, data.categories);
-        downloadFile(csv, `expenses-${Date.now()}.csv`, "text/csv");
+        downloadFile(csv, `extrack-backup-${dateToken}.csv`, "text/csv");
       } else {
         const json = JSON.stringify(
           {
@@ -41,8 +57,14 @@ export function ExportData() {
           null,
           2,
         );
-        downloadFile(json, `expenses-${Date.now()}.json`, "application/json");
+        downloadFile(
+          json,
+          `extrack-backup-${dateToken}.json`,
+          "application/json",
+        );
       }
+
+      markBackupCompleted();
 
       toast.success(`Exported ${data.expenses.length} expenses`);
       resetForm();
