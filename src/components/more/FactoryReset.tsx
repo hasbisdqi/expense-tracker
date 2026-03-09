@@ -11,8 +11,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { db, initializeDatabase } from "@/lib/db";
-import { userPreferences } from "@/lib/userPreferences";
+import { db, initializeDatabase } from "@/db/expenseTrackerDb";
+import { userPreferences } from "@/db/userPreferences";
 import { toast } from "sonner";
 import { useNavigate } from "react-router";
 

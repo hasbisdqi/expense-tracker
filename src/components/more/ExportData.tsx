@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
-import { Download } from "lucide-react";
+import { Download, HardDrive, CloudUpload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -10,10 +10,14 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { exportAllData } from "@/lib/db";
+import { exportAllData } from "@/db/expenseTrackerDb";
 import { markBackupCompleted } from "@/lib/backupReminder";
 import { Expense, Category } from "@/types/expense";
 import { toast } from "sonner";
+import { isDriveConnected } from "@/db/driveCredentials";
+import { getValidAccessToken, DriveSessionExpiredError } from "@/lib/driveAuth";
+import { uploadFileToDrive, findOrCreateBackupFolder } from "@/lib/driveApi";
+import { getDriveCredentials } from "@/db/driveCredentials";
 
 interface ExportDataProps {
   openOnMount?: boolean;
@@ -22,8 +26,14 @@ interface ExportDataProps {
 export function ExportData({ openOnMount = false }: ExportDataProps) {
   const [open, setOpen] = useState(false);
   const [formatType, setFormatType] = useState<"csv" | "json">("json");
+  const [saveTo, setSaveTo] = useState<"device" | "drive">("device");
   const [isExporting, setIsExporting] = useState(false);
   const hasAutoOpenedRef = useRef(false);
+  const [driveConnected, setDriveConnected] = useState(false);
+
+  useEffect(() => {
+    isDriveConnected().then(setDriveConnected);
+  }, []);
 
   useEffect(() => {
     if (!openOnMount || hasAutoOpenedRef.current) return;
@@ -33,8 +43,15 @@ export function ExportData({ openOnMount = false }: ExportDataProps) {
     hasAutoOpenedRef.current = true;
   }, [openOnMount]);
 
+  // Drive exports are JSON-only — enforce when switching to Drive
+  function handleSaveToChange(value: "device" | "drive") {
+    setSaveTo(value);
+    if (value === "drive") setFormatType("json");
+  }
+
   const resetForm = () => {
     setFormatType("json");
+    setSaveTo("device");
   };
 
   async function handleExport() {
@@ -42,11 +59,27 @@ export function ExportData({ openOnMount = false }: ExportDataProps) {
     try {
       const data = await exportAllData();
       const dateToken = format(new Date(), "yyyy-MM-dd");
+      const filename = `extrack-backup-${dateToken}.json`;
 
-      if (formatType === "csv") {
-        const csv = generateCSV(data.expenses, data.categories);
-        downloadFile(csv, `extrack-backup-${dateToken}.csv`, "text/csv");
-      } else {
+      if (saveTo === "drive") {
+        // --- Google Drive export ---
+        let accessToken: string;
+        try {
+          accessToken = await getValidAccessToken();
+        } catch (err) {
+          const message =
+            err instanceof DriveSessionExpiredError
+              ? "Google Drive session expired. Please reconnect."
+              : "Could not connect to Google Drive. Please reconnect.";
+          toast.error(message, {
+            action: {
+              label: "Go to Settings",
+              onClick: () => (window.location.href = "/settings/data"),
+            },
+          });
+          return;
+        }
+
         const json = JSON.stringify(
           {
             exportDate: new Date().toISOString(),
@@ -57,20 +90,58 @@ export function ExportData({ openOnMount = false }: ExportDataProps) {
           null,
           2,
         );
-        downloadFile(
-          json,
-          `extrack-backup-${dateToken}.json`,
-          "application/json",
+        const blob = new Blob([json], { type: "application/json" });
+        const creds = await getDriveCredentials();
+        if (!creds) return;
+        const folderID = await findOrCreateBackupFolder(accessToken);
+
+        // Update folderID in case it was (re)created
+        if (folderID !== creds.folderID) {
+          const { saveDriveCredentials } =
+            await import("@/db/driveCredentials");
+          await saveDriveCredentials({ ...creds, folderID });
+        }
+
+        const { webViewLink } = await uploadFileToDrive(
+          blob,
+          filename,
+          folderID,
+          accessToken,
         );
+
+        markBackupCompleted();
+        toast.success("Backup saved to Google Drive", {
+          action: {
+            label: "View in Drive ↗",
+            onClick: () => window.open(webViewLink, "_blank"),
+          },
+        });
+      } else {
+        // --- Device export ---
+        if (formatType === "csv") {
+          const csv = generateCSV(data.expenses, data.categories);
+          downloadFile(csv, `extrack-backup-${dateToken}.csv`, "text/csv");
+        } else {
+          const json = JSON.stringify(
+            {
+              exportDate: new Date().toISOString(),
+              version: "1.0",
+              expenses: data.expenses,
+              categories: data.categories,
+            },
+            null,
+            2,
+          );
+          downloadFile(json, filename, "application/json");
+        }
+        markBackupCompleted();
+        toast.success(`Exported ${data.expenses.length} expenses`);
       }
 
-      markBackupCompleted();
-
-      toast.success(`Exported ${data.expenses.length} expenses`);
       resetForm();
       setOpen(false);
-    } catch {
-      toast.error("Export failed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Export failed");
     } finally {
       setIsExporting(false);
     }
@@ -113,15 +184,68 @@ export function ExportData({ openOnMount = false }: ExportDataProps) {
                 </button>
                 <button
                   onClick={() => setFormatType("csv")}
+                  disabled={saveTo === "drive"}
                   className={`py-2 rounded-lg transition-all ${
                     formatType === "csv"
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted hover:bg-muted/80"
-                  }`}
+                  } disabled:opacity-40 disabled:cursor-not-allowed`}
                 >
                   CSV
                 </button>
               </div>
+              {saveTo === "drive" && (
+                <p className="text-xs text-muted-foreground">
+                  Drive backups are always JSON.
+                </p>
+              )}
+            </div>
+
+            {/* Save To */}
+            <div className="space-y-2">
+              <Label className="text-sm text-muted-foreground">Save to</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => handleSaveToChange("device")}
+                  className={`flex items-center justify-center gap-1.5 py-2 rounded-lg transition-all ${
+                    saveTo === "device"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted hover:bg-muted/80"
+                  }`}
+                >
+                  <HardDrive className="h-3.5 w-3.5" />
+                  This Device
+                </button>
+                <button
+                  onClick={() => driveConnected && handleSaveToChange("drive")}
+                  disabled={!driveConnected}
+                  title={
+                    !driveConnected
+                      ? "Connect Google Drive in Settings"
+                      : undefined
+                  }
+                  className={`flex items-center justify-center gap-1.5 py-2 rounded-lg transition-all ${
+                    saveTo === "drive"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted hover:bg-muted/80"
+                  } disabled:opacity-40 disabled:cursor-not-allowed`}
+                >
+                  <CloudUpload className="h-3.5 w-3.5" />
+                  Google Drive
+                </button>
+              </div>
+              {!driveConnected && (
+                <p className="text-xs text-muted-foreground">
+                  Connect Google Drive in{" "}
+                  <a
+                    href="/settings/data"
+                    className="underline underline-offset-2"
+                  >
+                    Settings
+                  </a>{" "}
+                  to enable cloud backup.
+                </p>
+              )}
             </div>
 
             {/* Export Button */}
