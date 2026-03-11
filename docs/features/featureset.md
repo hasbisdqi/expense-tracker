@@ -76,18 +76,28 @@ Powerful search capabilities across all expenses:
 
 ### 6. Data Management
 
-Accessible via **Settings → Data Management** (dedicated sub-screen).
+Accessible via **Settings → Data Management** (dedicated sub-screen). The page is organised into two cards:
 
-#### Export
+1. **Backup** — reminders, Google Drive status, and backup creation
+2. **Import & Export** — raw data dump (export) and restore (import)
 
-- **Format options**: JSON (default) or CSV
+#### Backup
+
+- **JSON-only** format — structured snapshot designed for restoring
+- **Save to device** or **Google Drive** (when connected)
+- **Drive not connected**: shows a "Connect Drive" button that starts the OAuth flow inline — no separate settings screen required
+- **Filename convention**: `extrack-backup-YYYY-MM-DD.json`
+- **Duplicate handling**: backing up to Drive on the same day replaces the existing file (no duplicates)
+- **Tracks last backup**: records date and destination (Device / Google Drive) for use in reminder display
+
+#### Export Data
+
+- **Device-only** — no Drive option; purely a data dump, not reminder-tracked
+- **Format options**: JSON or CSV
 - **Always exports all data** — no date range filtering
 - **JSON export** includes full expense data, category definitions, and export metadata
-- **CSV export** with columns: Date, Time, Amount, Category, Description, Tags, Type
-- **Save to device** or **Google Drive** (when connected)
-- **Drive exports are JSON-only** — CSV available for device export only
-- **Filename convention**: `extrack-backup-YYYY-MM-DD.json` (or `.csv`)
-- **Duplicate handling**: exporting to Drive on the same day replaces the existing file (no duplicates)
+- **CSV export** with columns: Date, Time, Category, Description, Value, Tags, IsAdhoc, Attachment
+- **Filename convention**: `extrack-export-YYYY-MM-DD.json` (or `.csv`)
 
 #### Google Drive Backup
 
@@ -95,20 +105,21 @@ Accessible via **Settings → Data Management** (dedicated sub-screen).
 - **PKCE OAuth 2.0** authentication with real refresh tokens (no repeated logins)
 - **Auto-creates `ExTrack Backups` folder** in the user's Drive on first backup
 - **Token auto-refresh**: access token silently refreshed before each upload; no popup for logged-in users
-- **Account management** in Settings → Data Management:
-  - View connected account email and folder name
-  - Disconnect account (revokes token, clears credentials locally; Drive files are not deleted)
+- **Inline account management** inside the Backup card:
+  - Connected state: shows account email and folder name (`ExTrack Backups`) with an **Unlink** button
+  - Disconnected state: shows a **Connect** button that starts the OAuth flow
+  - Disconnecting revokes the token and clears credentials locally; Drive files are not deleted
 - **Scope**: `drive.file` — app can only access files it created, not any other Drive content
 - **No API key required** — all Drive calls use the user's OAuth access token only
 - **"View in Drive ↗"** action in success toast after each cloud backup
 
-#### Backup Reminders & Export UX
+#### Backup Reminders
 
-- **Backup reminders**: user-configurable reminders (Never / Daily / Weekly / Monthly) to encourage regular exports. Shown once per qualifying day; reminders record last-shown and last-backup timestamps.
-- **Startup prompt**: app shows a non-intrusive backup prompt on startup when a reminder is due; "Backup Now" opens the Export dialog.
-- **Export defaults**: JSON is the recommended default (importable). CSV remains available for device export.
-- **Filename convention**: exports use `extrack-backup-YYYY-MM-DD.json` (or `.csv`).
-- **Settings**: reminder frequency is configurable from Settings → Data Management.
+- **User-configurable frequency**: Never / Daily / Weekly / Monthly
+- Shown once per qualifying day; records last-shown and last-backup timestamps
+- **Last backup display**: shows date, days elapsed, and destination — e.g. "Last backed up: 3 days ago · Device" or "Last backed up: today · Google Drive"
+- **Startup prompt**: non-intrusive banner when a reminder is due; **"Backup Now"** opens the Backup dialog directly
+- **Frequency setting** is in the Backup card on Settings → Data Management
 
 #### Import
 
