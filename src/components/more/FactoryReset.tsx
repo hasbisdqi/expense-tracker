@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { db, initializeDatabase } from "@/db/expenseTrackerDb";
 import { userPreferences } from "@/db/userPreferences";
+import { clearPassphrase } from "@/lib/backup";
 import { toast } from "sonner";
 import { useNavigate } from "react-router";
 
@@ -28,6 +29,7 @@ export function FactoryReset() {
       await Promise.all([db.expenses.clear(), db.categories.clear(), db.tagMetadata.clear()]);
 
       userPreferences.clearAll();
+      await clearPassphrase();
 
       // Re-seed default categories
       await initializeDatabase();
@@ -59,7 +61,7 @@ export function FactoryReset() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Factory Reset</AlertDialogTitle>
-            <AlertDialogDescription asChild>
+            <AlertDialogDescription asChild className="text-left">
               <div className="space-y-3 pt-2">
                 <div className="text-sm space-y-2">
                   <div className="font-medium text-foreground">This will permanently delete:</div>

@@ -4,7 +4,7 @@ import {
   getBackupReminderPreferences,
   getDaysSinceLastBackup,
   setBackupReminderSchedule,
-} from "@/lib/backupReminder";
+} from "@/lib/backup";
 import { type BackupReminderSchedule } from "@/db/userPreferences";
 import {
   Select,

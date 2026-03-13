@@ -7,7 +7,7 @@ import {
   getDaysSinceLastBackup,
   markBackupReminderBannerShown,
   shouldShowBackupReminderBanner,
-} from "@/lib/backupReminder";
+} from "@/lib/backup";
 import { type BackupReminderSchedule } from "@/db/userPreferences";
 
 type PromptState = {

@@ -7,6 +7,7 @@ import { BackupCard } from "@/components/more/BackupCard";
 import { ExportData } from "@/components/more/ExportData";
 import { ImportData } from "@/components/more/ImportData";
 import { FactoryReset } from "@/components/more/FactoryReset";
+import { EncryptionSettings } from "@/components/more/EncryptionSettings";
 
 export default function DataManagementPage() {
   const navigate = useNavigate();
@@ -46,6 +47,11 @@ export default function DataManagementPage() {
           transition={{ delay: 0.1 }}
           className="space-y-3"
         >
+          {/* Encryption card */}
+          <div className="p-4 rounded-xl bg-card border border-border/50">
+            <EncryptionSettings />
+          </div>
+
           {/* Backup card */}
           <div className="p-4 rounded-xl bg-card border border-border/50">
             <BackupCard
@@ -68,7 +74,7 @@ export default function DataManagementPage() {
 
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground">
-                Restore from a JSON backup file. Choose merge or override mode.
+                Restore from an encrypted .extrack backup file. Choose merge or override mode.
               </p>
               <ImportData />
             </div>
