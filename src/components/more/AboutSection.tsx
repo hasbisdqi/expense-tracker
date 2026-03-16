@@ -1,4 +1,8 @@
+import { config } from "@/config";
 import { Github, Lock, Folder, PiggyBank } from "lucide-react";
+
+const versionLabel =
+  config.env === "production" ? `v${config.appVersion}` : `v${config.appVersion}.${config.env}`;
 
 export function AboutSection() {
   return (
@@ -9,8 +13,8 @@ export function AboutSection() {
       <h3 className="text-base font-semibold">Expense Tracker</h3>
 
       <div className="text-xs text-muted-foreground space-y-0.5">
-        <p>Version v{__APP_VERSION__}</p>
-        <p>Last Updated: {__BUILD_TIME__}</p>
+        <p>Version {versionLabel}</p>
+        <p>Last Updated: {config.buildTime}</p>
       </div>
 
       <div className="text-xs">

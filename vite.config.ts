@@ -7,7 +7,7 @@ import { visualizer } from "rollup-plugin-visualizer";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
-import packageJson from "./package.json";
+import packageJson from "./package.json" with { type: "json" };
 
 const visualizerPlugin = visualizer({
   filename: "./dist/stats.html",
@@ -27,45 +27,40 @@ const pwaPlugin = VitePWA({
 });
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  server: {
-    host: "::",
-    port: 3000,
-  },
-  plugins: [
-    react(),
-    mode === "development" && componentTagger(),
-    pwaPlugin,
-    process.env.ANALYZE === "true" && (visualizerPlugin as Plugin),
-  ].filter(Boolean),
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+export default defineConfig(({ mode }) => {
+  return {
+    server: {
+      host: "::",
+      port: 3000,
     },
-  },
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (id.includes("node_modules")) {
-            if (id.includes("recharts")) return "vendor_recharts";
-            if (id.includes("framer-motion")) return "vendor_framer";
-            if (id.includes("dexie")) return "vendor_dexie";
-            if (id.includes("date-fns")) return "vendor_datefns";
-            return "vendor";
-          }
+    plugins: [
+      react(),
+      mode === "development" && componentTagger(),
+      pwaPlugin,
+      process.env.ANALYZE === "true" && (visualizerPlugin as Plugin),
+    ].filter(Boolean),
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes("node_modules")) {
+              if (id.includes("recharts")) return "vendor_recharts";
+              if (id.includes("framer-motion")) return "vendor_framer";
+              if (id.includes("dexie")) return "vendor_dexie";
+              if (id.includes("date-fns")) return "vendor_datefns";
+              return "vendor";
+            }
+          },
         },
       },
     },
-  },
-  define: {
-    __APP_VERSION__: JSON.stringify(packageJson.version),
-    __BUILD_TIME__: JSON.stringify(
-      new Date().toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-      }),
-    ),
-  },
-}));
+    define: {
+      __APP_VERSION__: JSON.stringify(packageJson.version),
+    },
+  };
+});
