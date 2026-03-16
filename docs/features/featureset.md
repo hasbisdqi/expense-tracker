@@ -76,17 +76,47 @@ Powerful search capabilities across all expenses:
 
 ### 6. Data Management
 
-Accessible via **Settings → Data Management** (dedicated sub-screen). The page is organised into two cards:
+Accessible via **Settings → Data Management** (dedicated sub-screen). The page is organised into three cards:
 
-1. **Backup** — reminders, Google Drive status, and backup creation
-2. **Import & Export** — raw data dump (export) and restore (import)
+1. **Encryption** — passphrase setup and management (required before any backup)
+2. **Backup** — reminders, Google Drive status, and backup creation
+3. **Import & Export** — raw data dump (export) and restore (import)
+
+#### End-to-End Encryption (E2EE)
+
+All backups are always end-to-end encrypted. No unencrypted backup file ever leaves the device.
+
+- **Algorithm**: AES-GCM 256-bit with PBKDF2-SHA256 key derivation (600,000 iterations)
+- **Implementation**: Pure [Web Crypto API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API) — zero additional packages
+- **Passphrase storage**: Stored locally in IndexedDB via `idb-keyval`; never transmitted anywhere
+- **Encrypted file format**: `.extrack` — a self-describing JSON envelope:
+  ```json
+  {
+    "format": "extrack-encrypted-backup",
+    "version": "1",
+    "algorithm": "AES-GCM",
+    "kdf": "PBKDF2-SHA256",
+    "iterations": 600000,
+    "salt": "<base64url-16bytes>",
+    "iv": "<base64url-12bytes>",
+    "ciphertext": "<base64url>"
+  }
+  ```
+- **Forward compatibility**: iterations are stored per-file so future algorithm upgrades don't break old files
+- **Passphrase UX** (Encryption card):
+  - **Unset state**: shows `Passphrase: Unset` with a "Set Passphrase" button; clicking opens the setup modal
+  - **Set state**: shows masked `●●●●●●●●●●●●` with an Eye icon (reveal) and Pencil icon (change)
+  - **Change flow**: two-step — warning dialog (old files won't be re-encrypted) → new passphrase form
+  - **Minimum length**: 8 characters
+- **Backup gate**: attempting to create a backup without a passphrase opens the setup modal first; on completion, the backup dialog opens automatically
+- **Factory reset**: clears the stored passphrase along with all other data
 
 #### Backup
 
-- **JSON-only** format — structured snapshot designed for restoring
+- **Always encrypted** — backups are written as `.extrack` files; no plaintext backup pathway exists
 - **Save to device** or **Google Drive** (when connected)
 - **Drive not connected**: shows a "Connect Drive" button that starts the OAuth flow inline — no separate settings screen required
-- **Filename convention**: `extrack-backup-YYYY-MM-DD.json`
+- **Filename convention**: `extrack-backup-YYYY-MM-DD.extrack`
 - **Duplicate handling**: backing up to Drive on the same day replaces the existing file (no duplicates)
 - **Tracks last backup**: records date and destination (Device / Google Drive) for use in reminder display
 
@@ -94,10 +124,16 @@ Accessible via **Settings → Data Management** (dedicated sub-screen). The page
 
 - **Device-only** — no Drive option; purely a data dump, not reminder-tracked
 - **Format options**: JSON or CSV
+- **Optional encryption**: "Encrypt this export" checkbox (default unchecked)
+  - When checked: encrypts content (regardless of format) and saves as `.extrack`
+  - When checked and no passphrase set: opens passphrase setup inline before saving
+  - When unchecked: saves as plain `.json` or `.csv` as before
 - **Always exports all data** — no date range filtering
 - **JSON export** includes full expense data, category definitions, and export metadata
 - **CSV export** with columns: Date, Time, Category, Description, Value, Tags, IsAdhoc, Attachment
-- **Filename convention**: `extrack-export-YYYY-MM-DD.json` (or `.csv`)
+- **Filename conventions**:
+  - Unencrypted: `extrack-export-YYYY-MM-DD.json` / `.csv`
+  - Encrypted: `extrack-export-YYYY-MM-DD.extrack`
 
 #### Google Drive Backup
 
@@ -123,19 +159,24 @@ Accessible via **Settings → Data Management** (dedicated sub-screen). The page
 
 #### Import
 
-- **JSON import** from previous exports only
+- **`.extrack` files only** — only encrypted backup files can be imported (plain JSON exports are not importable)
+- **Auto-decrypt**: if a passphrase is stored, decryption happens silently on file selection
+- **Manual passphrase fallback**: if no passphrase is stored (new device) or auto-decrypt fails, a passphrase input is shown; the file stays loaded so the user can retry without re-selecting
+- **Wrong passphrase detection**: AES-GCM authentication tag failure maps to a clear "Wrong passphrase — try again" error
+- **CSV export guard**: encrypted CSV exports show an error ("This file is an encrypted export, not a restorable backup") and are rejected
 - **Two merge modes** (Override is default):
   - **Override**: Replace all existing data
   - **Merge**: Add to existing data, skip duplicates
 - **Import preview**: Shows expense count, category count, date range
-- **Validation**: Checks file structure before import
+- **File size cap**: 10 MB limit enforced before the file is read into memory
+- **Validation**: Checks encrypted envelope structure and backup JSON shape before import
 
 #### Clear All Data
 
-- **Complete data wipe**: Expenses, categories, tags, settings
+- **Complete data wipe**: Expenses, categories, tags, settings, encryption passphrase
 - **Re-seeding**: Restores default categories
 - **Confirmation dialog** with clear warnings
-- **Full storage cleanup**: clears IndexedDB (Dexie) and localStorage for a fresh start
+- **Full storage cleanup**: clears IndexedDB (Dexie) and idb-keyval store for a fresh start
 
 ### 7. Multi-Currency Support
 
@@ -253,9 +294,14 @@ Precise tracking of when expenses occurred:
 
 ### 14. Data Privacy & Security
 
-Complete local data management:
+Complete local data management with end-to-end encryption:
 
 - **No backend server**: All data stays on device (or user's own Google Drive)
+- **End-to-end encryption**: Backups are always encrypted with AES-GCM 256 before leaving the device — not even a Google Drive admin can read them
+- **Zero-knowledge design**: The passphrase is stored only in the user's own IndexedDB; it is never transmitted, logged, or accessible to anyone else
+- **Strong key derivation**: PBKDF2-SHA256 with 600,000 iterations makes brute-force attacks computationally infeasible
+- **Pure Web Crypto API**: Encryption uses the browser's native cryptography primitives — no third-party crypto library is bundled
+- **Self-describing encrypted files**: The `.extrack` format stores algorithm parameters per-file, enabling future algorithm upgrades without breaking old backups
 - **IndexedDB storage**: Persistent local database
 - **No analytics**: Zero tracking or telemetry
 - **No user accounts**: No registration required
@@ -304,6 +350,7 @@ Well-structured codebase:
 - **PWA**: vite-plugin-pwa with Workbox
 - **Date Utils**: date-fns
 - **Image Processing**: browser-image-compression
+- **Cryptography**: Web Crypto API (AES-GCM 256, PBKDF2-SHA256) — built into the browser, zero extra packages
 
 ---
 
@@ -316,6 +363,7 @@ Well-structured codebase:
 - [ ] Split expenses between multiple categories
 - [ ] Receipt OCR for automatic data entry
 - [x] Cloud backup/sync via Google Drive (optional, privacy-first, PKCE OAuth, no backend)
+- [x] End-to-end encryption for backups and exports (AES-GCM 256, PBKDF2-SHA256, `.extrack` format, pure Web Crypto API)
 - [ ] Dashboard widgets/cards customization
 - [ ] More chart types (donut, stacked bar, area)
 - [ ] Expense comparison (month-over-month, year-over-year)
