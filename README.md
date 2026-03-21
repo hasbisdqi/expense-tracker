@@ -1,5 +1,6 @@
-# 🚀 Expense Tracker PWA
+# 🚀 ExTrack - Expense Tracker PWA
 
+[![Live Demo](https://img.shields.io/badge/🌐%20Live%20Demo-extrack.madhukm.com-25D7AD?style=flat-square)](https://extrack.madhukm.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Vite](https://img.shields.io/badge/Built%20With-Vite-blue)](https://vitejs.dev/)
 [![React](https://img.shields.io/badge/React-18.3.1-61dafb)](https://react.dev/)
@@ -11,7 +12,11 @@
 
 ## 🎉 Welcome!
 
-**Expense Tracker** is a privacy-first, offline-friendly, installable PWA for tracking and analyzing your personal expenses. No accounts, no backend, just pure fun and financial freedom! 🌈💸
+**ExTrack** is a privacy-first, offline-friendly, installable PWA for tracking and analyzing your personal expenses. No accounts, no backend, just pure fun and financial freedom! 🌈💸
+
+<!-- 🎥 GIF: Hero overview : 15–20s tour: home page with expense list, tap Add, fill the form, see the dashboard update, swipe to Analysis showing pie + trend charts -->
+
+📖 **[View Full Project Showcase](docs/gtm/project-showcase.md)**
 
 ---
 
