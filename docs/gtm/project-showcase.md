@@ -61,7 +61,13 @@ ExTrack does exactly none of that.
 
 ### 1 : ⚡ Logging Expenses & Organising With Categories + Tags
 
-<!-- 🎥 GIF: Logging flow : Open the FAB / Add button, type an amount, watch the description autocomplete kick in after 2 chars, pick a category (show the colourful icon grid), add 1–2 tags with suggestions appearing, hit Save. Then switch to the Categories tab: create a new category with a custom colour and icon, then go to Tags and show the usage stats + rename flow. -->
+<!-- 🎥 Video: Logging flow (exp1.mp4) -->
+<div style="max-width:400px;margin:12px auto;">
+  <video controls muted loop style="width:100%;height:auto;border-radius:8px;box-shadow:0 6px 18px rgba(4,7,12,0.15);">
+    <source src="./assets/exp1.mp4" type="video/mp4">
+    Your browser does not support the video tag. Download the video: <a href="./assets/exp1.mp4">exp1.mp4</a>
+  </video>
+</div>
 
 Logging an expense takes **under 10 seconds** : and ExTrack actively helps you do it faster every time.
 
@@ -82,6 +88,13 @@ Up to **4 tags per expense** keeps things organised without turning into chaos.
 ### 2 : 📊 Analysis, Charts & Spending Trends
 
 <!-- 🎥 GIF: Analysis flow : Navigate to the Analysis tab. Show the period selector (Week → Month → Year). Navigate forward/backward with the arrows while watching the pie chart update live. Tap a pie segment to highlight it in the legend. Switch to Bar chart view. Scroll down to the Spending Trend section : show the line chart animating. Toggle the "Exclude ad-hoc expenses" switch and watch the totals update. Tap the Export button and show the CSV/JSON options. -->
+
+<div style="max-width:400px;margin:12px auto;">
+  <video controls muted loop style="width:100%;height:auto;border-radius:8px;box-shadow:0 6px 18px rgba(4,7,12,0.15);">
+    <source src="./assets/exp2.mp4" type="video/mp4">
+    Your browser does not support the video tag. Download the video: <a href="./assets/exp2.mp4">exp2.mp4</a>
+  </video>
+</div>
 
 The Analysis page turns your raw spending data into a **story you can actually understand**.
 
@@ -117,7 +130,12 @@ Hit **Export** right from the analysis view : get a CSV or JSON of the filtered 
 
 ### 3 : 🔐 E2EE Backup via Google Drive & Restore on Any Device
 
-<!-- 🎥 GIF: Backup & Restore flow : Go to Settings → Data Management. Show the Encryption card: set a passphrase (type it, confirm it, save). The state changes to masked dots with eye/pencil icons. Tap "Backup Now". The backup dialog opens : tap "Google Drive". Watch the OAuth consent screen, then the success toast with "View in Drive ↗". THEN: Open a fresh browser profile or incognito tab. Navigate to the app. Go to Data Management → Import. Drop the .extrack file. Show the passphrase prompt, enter it, see the import preview (X expenses, Y categories, date range). Hit Import. The data appears. -->
+<div style="max-width:400px;margin:12px auto;">
+  <video controls muted loop style="width:100%;height:auto;border-radius:8px;box-shadow:0 6px 18px rgba(4,7,12,0.15);">
+    <source src="./assets/exp3.mp4" type="video/mp4">
+    Your browser does not support the video tag. Download the video: <a href="./assets/exp3.mp4">exp3.mp4</a>
+  </video>
+</div>
 
 This is the feature that makes ExTrack genuinely special.
 
@@ -176,6 +194,13 @@ Move to a new phone? Reinstall the app? Just:
 
 <!-- 🎥 GIF: PWA install flow : On mobile Chrome (Android): open https://extrack.madhukm.com, show the "Add to Home Screen" / install banner appearing. Tap Install. Watch the app icon appear on the home screen. Launch it from the home screen : show it opens in standalone mode (no browser chrome). Go offline (enable airplane mode), refresh : app still works perfectly. On desktop Chrome: show the install icon in the address bar, click it, the app opens as a standalone window. -->
 
+<div style="max-width:400px;margin:12px auto;">
+  <video controls muted loop style="width:100%;height:auto;border-radius:8px;box-shadow:0 6px 18px rgba(4,7,12,0.15);">
+    <source src="./assets/exp4.mp4" type="video/mp4">
+    Your browser does not support the video tag. Download the video: <a href="./assets/exp4.mp4">exp4.mp4</a>
+  </video>
+</div>
+
 ExTrack is a **Progressive Web App** : which means it installs and runs like a native app without going anywhere near an app store.
 
 | Platform                     | How to install                                                              |
@@ -204,13 +229,13 @@ ExTrack was designed from the ground up around one principle: **your financial d
 
 ### Zero-Knowledge Architecture
 
-| Claim             | Reality                                                                                                                                     |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| No backend server | The app is pure static HTML/JS/CSS. There is no API, no database, no server to hack.                                                        |
-| No accounts       | You never create a username or password with us. There's nothing to breach.                                                                 |
-| No telemetry      | Zero analytics, zero crash reporting, zero "anonymous usage data." Nothing is sent anywhere.                                                |
-| No ads            | The app is open source and MIT licensed. There is no business model that monetises you.                                                     |
-| IndexedDB storage | All expenses, categories, tags, and settings live in your browser's local IndexedDB. Clearing site data wipes it : you are in full control. |
+| Claim             | Reality                                                                                                                                    |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| No backend server | The app is pure static HTML/JS/CSS. There is no API, no database, no server to hack.                                                       |
+| No accounts       | You never create a username or password with us. There's nothing to breach.                                                                |
+| No telemetry      | Zero analytics, zero crash reporting, zero "anonymous usage data." Nothing is sent anywhere.                                               |
+| No ads            | The app is open source and MIT licensed. There is no business model that monetises you.                                                    |
+| IndexedDB storage | All expenses, categories, tags, and settings live in your browser's local IndexedDB. Clearing site data wipes it; you are in full control. |
 
 ### Backup Security In Depth
 
@@ -284,7 +309,7 @@ Found a bug? Have a feature idea? Want to contribute?
 → **[Start a discussion](https://github.com/gammaSpeck/expense-tracker/discussions)**
 → **[Read the changelog](../../CHANGELOG.md)**
 
-Pull requests are very welcome. If you believe privacy-first tools should be the norm, not the exception : so do we. ⭐ Star the repo if ExTrack earns it.
+Pull requests are very welcome. If you believe privacy-first tools should be the norm, not the exception, so do we. ⭐ Star the repo if ExTrack earns it.
 
 ---
 
