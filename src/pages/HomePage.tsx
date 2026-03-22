@@ -33,7 +33,7 @@ export function FloatingActionButton() {
     <button
       onClick={() => navigate("/add")}
       className="fixed bottom-20 left-1/2 -translate-x-1/2 w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center  z-50 fab"
-      aria-label="Add expense"
+      aria-label="Add transaction"
     >
       <Plus className="h-6 w-6" />
     </button>
@@ -82,7 +82,7 @@ export default function HomePage() {
     if (!expenseToDelete) return;
     try {
       await deleteExpense(expenseToDelete.id);
-      toast.success("Expense deleted");
+      toast.success("Transaction deleted");
     } catch {
       toast.error("Failed to delete");
     }
@@ -167,20 +167,17 @@ export default function HomePage() {
             onDuplicate={handleDuplicate}
             onEdit={handleEdit}
             onDelete={(expense) => setExpenseToDelete(expense)}
-            emptyMessage={"No expenses yet. Add your first one!"}
+            emptyMessage={"No transactions yet. Add your first one!"}
           />
         </m.div>
-
-        {/* FAB */}
-        {isMobile && <FloatingActionButton />}
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={!!expenseToDelete} onOpenChange={() => setExpenseToDelete(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete Expense?</AlertDialogTitle>
+              <AlertDialogTitle>Delete Transaction?</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete this expense? This action cannot be undone.
+                Are you sure you want to delete this transaction? This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

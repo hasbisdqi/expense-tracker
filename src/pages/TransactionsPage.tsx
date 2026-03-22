@@ -65,7 +65,7 @@ export default function TransactionsPage() {
     if (!expenseToDelete) return;
     try {
       await deleteExpense(expenseToDelete.id);
-      toast.success("Expense deleted");
+      toast.success("Transaction deleted");
     } catch {
       toast.error("Failed to delete");
     }
@@ -159,9 +159,9 @@ export default function TransactionsPage() {
         <AlertDialog open={!!expenseToDelete} onOpenChange={() => setExpenseToDelete(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete Expense?</AlertDialogTitle>
+              <AlertDialogTitle>Delete Transaction?</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete this expense? This action cannot be undone.
+                Are you sure you want to delete this transaction? This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

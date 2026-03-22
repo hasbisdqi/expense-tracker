@@ -231,7 +231,7 @@ export function useMonthSummary(accountId?: string) {
       monthStart,
       monthEnd,
     };
-  }, [expenses]);
+  }, [expenses, accountId]);
 }
 
 export function useRecentExpenses(limit: number = 10, accountId?: string) {

@@ -124,7 +124,7 @@ export default function CategoriesPage() {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{category.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {expenseCounts[category.id] || 0} expenses
+                        {expenseCounts[category.id] || 0} transactions
                       </p>
                     </div>
 
@@ -194,7 +194,7 @@ export default function CategoriesPage() {
               <AlertDialogDescription>
                 {deleteData?.expenseCount ? (
                   <>
-                    This category has {deleteData.expenseCount} expenses. What would you like to do?
+                    This category has {deleteData.expenseCount} transactions. What would you like to do?
                   </>
                 ) : (
                   "This action cannot be undone."
@@ -211,7 +211,7 @@ export default function CategoriesPage() {
                   <div className="flex items-start space-x-3">
                     <RadioGroupItem value="move" id="move" />
                     <div className="space-y-1">
-                      <Label htmlFor="move">Move expenses to another category</Label>
+                      <Label htmlFor="move">Move transactions to another category</Label>
                       {deleteAction === "move" && (
                         <Select value={moveToCategory} onValueChange={setMoveToCategory}>
                           <SelectTrigger className="w-full mt-2">
@@ -237,10 +237,10 @@ export default function CategoriesPage() {
                     <RadioGroupItem value="cascade" id="cascade" />
                     <div className="space-y-1">
                       <Label htmlFor="cascade" className="text-destructive">
-                        Delete all {deleteData.expenseCount} expenses
+                        Delete all {deleteData.expenseCount} transactions
                       </Label>
                       <p className="text-xs text-muted-foreground">
-                        This will permanently delete all expenses in this category
+                        This will permanently delete all transactions in this category
                       </p>
                     </div>
                   </div>

@@ -28,10 +28,10 @@ export default function EditExpensePage() {
 
     try {
       await deleteExpense(id);
-      toast.success("Expense deleted");
+      toast.success("Transaction deleted");
       navigate("/");
     } catch {
-      toast.error("Failed to delete expense");
+      toast.error("Failed to delete transaction");
     }
   };
 
@@ -50,7 +50,7 @@ export default function EditExpensePage() {
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="h-9 w-9">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-semibold">Edit Expense</h1>
+          <h1 className="text-xl font-semibold">Edit Transaction</h1>
         </div>
         <p className="text-muted-foreground">Loading...</p>
       </div>
@@ -66,7 +66,7 @@ export default function EditExpensePage() {
               <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="h-9 w-9">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <h1 className="text-xl font-semibold">Edit Expense</h1>
+              <h1 className="text-xl font-semibold">Edit Transaction</h1>
             </div>
 
             <AlertDialog>
@@ -81,9 +81,9 @@ export default function EditExpensePage() {
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Expense?</AlertDialogTitle>
+                  <AlertDialogTitle>Delete Transaction?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Are you sure you want to delete this expense? This action cannot be undone.
+                    Are you sure you want to delete this transaction? This action cannot be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
