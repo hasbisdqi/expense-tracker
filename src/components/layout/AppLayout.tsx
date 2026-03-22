@@ -1,4 +1,5 @@
 import { BottomNav, SidebarNav } from "./Navigation";
+import { Analytics } from "@vercel/analytics/next"
 
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -12,6 +13,8 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="min-h-screen bg-background flex">
       <SidebarNav />
+
+      <Analytics />
 
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Header */}
