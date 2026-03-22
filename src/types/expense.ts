@@ -4,6 +4,7 @@ export type TransactionType = "expense" | "income" | "transfer";
 
 export interface Account {
   id: string;
+  user_id?: string;
   name: string;
   icon: string;
   color: string;
@@ -12,6 +13,7 @@ export interface Account {
 
 export interface Expense {
   id: string;
+  user_id?: string;
   type: TransactionType;
   accountId: string;
   toAccountId?: string; // used for transfers
@@ -29,10 +31,20 @@ export interface Expense {
 
 export interface Category {
   id: string;
+  user_id?: string;
   name: string;
   icon: string; // Lucide icon name
   color: string; // Hex color code
   isDefault?: boolean; // Cannot delete default categories
+  createdAt: string;
+}
+
+export interface SyncQueueItem {
+  id: string;
+  action: "insert" | "update" | "delete";
+  table: string;
+  recordId: string;
+  data?: any;
   createdAt: string;
 }
 

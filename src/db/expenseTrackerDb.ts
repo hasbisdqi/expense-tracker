@@ -1,5 +1,5 @@
 import Dexie, { Table } from "dexie";
-import { Expense, Category, TagMetadata, Account } from "@/types/expense";
+import { Expense, Category, TagMetadata, Account, SyncQueueItem } from "@/types/expense";
 import { v4 as uuidv4 } from "uuid";
 
 // Category colors palette
@@ -63,6 +63,7 @@ class ExpenseDatabase extends Dexie {
   categories!: Table<Category, string>;
   tagMetadata!: Table<TagMetadata, string>;
   accounts!: Table<Account, string>;
+  sync_queue!: Table<SyncQueueItem, string>;
 
   constructor() {
     super("ExpenseTrackerDB");
@@ -111,6 +112,15 @@ class ExpenseDatabase extends Dexie {
         });
       }
     });
+
+    // Version 4: sync_queue and updated schemas
+    this.version(4).stores({
+      expenses: "id, category, accountId, type, date, time, [date+time], isAdhoc, *tags, createdAt, updatedAt",
+      categories: "id, &name, updatedAt",
+      tagMetadata: "tag, count, lastUsed",
+      accounts: "id, &name, updatedAt",
+      sync_queue: "id, action, table, recordId, createdAt",
+    });
   }
 }
 
@@ -149,6 +159,20 @@ export async function initializeDatabase(): Promise<void> {
     await db.categories.bulkAdd(categories);
     console.log("Default categories initialized");
   }
+}
+
+export async function linkDataToUser(userId: string): Promise<void> {
+  await db.transaction("rw", [db.expenses, db.categories, db.accounts], async () => {
+    await db.accounts.toCollection().modify((acc) => {
+      if (!acc.user_id) acc.user_id = userId;
+    });
+    await db.categories.toCollection().modify((cat) => {
+      if (!cat.user_id) cat.user_id = userId;
+    });
+    await db.expenses.toCollection().modify((exp) => {
+      if (!exp.user_id) exp.user_id = userId;
+    });
+  });
 }
 
 // Expense CRUD operations

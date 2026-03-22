@@ -4,6 +4,10 @@ import { useNavigate } from "react-router";
 import { useTheme } from "@/contexts/ThemeContext";
 import CurrencyDropdown from "@/components/more/CurrencyDropdown";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+import { useEffect, useState } from "react";
+import { Cloud, CloudOff, LogOut } from "lucide-react";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -14,6 +18,24 @@ export default function SettingsPage() {
     { value: "dark" as const, icon: Moon },
     { value: "system" as const, icon: Monitor },
   ];
+
+  const { user } = useAuth();
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
 
   return (
     <LazyMotion features={domAnimation}>
@@ -76,6 +98,33 @@ export default function SettingsPage() {
             <span className="text-sm font-medium">About App</span>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </button>
+
+          {/* Sync Status Row */}
+          <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-card border border-border/50 mt-4">
+            <div className="flex flex-col">
+              <span className="text-sm font-medium flex items-center gap-2">
+                Sync Status
+                {isOnline ? <Cloud className="h-4 w-4 text-primary" /> : <CloudOff className="h-4 w-4 text-muted-foreground" />}
+              </span>
+              <span className="text-xs text-muted-foreground mt-0.5">
+                {user ? `Logged in as ${user.email}` : "Not logged in"}
+              </span>
+            </div>
+            <span className="text-xs font-medium">
+              {isOnline ? "Active" : "Offline"}
+            </span>
+          </div>
+
+          {/* Logout Button */}
+          {user && (
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive/20 transition-colors mt-2"
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="text-sm font-medium">Log Out</span>
+            </button>
+          )}
         </m.div>
       </div>
     </LazyMotion>

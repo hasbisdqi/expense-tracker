@@ -7,7 +7,8 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { ReloadPrompt } from "@/components/ReloadPrompt";
 import { BackupReminderPrompt } from "@/components/BackupReminderPrompt";
 import { lazy, useEffect } from "react";
-import { initializeDatabase } from "@/db/expenseTrackerDb";
+import { initializeDatabase, linkDataToUser } from "@/db/expenseTrackerDb";
+import { startDownstreamSync, processSyncQueue } from "@/db/sync";
 
 import HomePage from "./pages/HomePage";
 
@@ -17,8 +18,10 @@ import DataManagementPage from "./pages/DataManagementPage";
 import AboutPage from "./pages/AboutPage";
 import NotFound from "./pages/NotFound";
 import GoogleCallbackPage from "./pages/GoogleCallbackPage";
-
 import { CurrencyProvider } from "@/contexts/CurrencyContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import AuthPage from "@/pages/AuthPage";
+import { Loader2 } from "lucide-react";
 
 const AddExpensePage = lazy(() => import("@/pages/AddExpensePage"));
 const AccountsPage = lazy(() => import("@/pages/AccountsPage"));
@@ -29,9 +32,29 @@ const EditExpensePage = lazy(() => import("@/pages/EditExpensePage"));
 const queryClient = new QueryClient();
 
 function AppContent() {
+  const { user, loading } = useAuth();
+
   useEffect(() => {
-    initializeDatabase();
-  }, []);
+    if (user) {
+      initializeDatabase().then(async () => {
+        await linkDataToUser(user.id);
+        await startDownstreamSync();
+        await processSyncQueue();
+      });
+    }
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthPage />;
+  }
 
   return (
     <AppLayout>
@@ -65,8 +88,9 @@ function RootRoutes() {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <CurrencyProvider>
-      <ThemeProvider>
+    <AuthProvider>
+      <CurrencyProvider>
+        <ThemeProvider>
         <TooltipProvider>
           <Sonner position="top-right" duration={3000} />
           <BrowserRouter>
@@ -75,7 +99,8 @@ const App = () => (
           <ReloadPrompt />
         </TooltipProvider>
       </ThemeProvider>
-    </CurrencyProvider>
+      </CurrencyProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
