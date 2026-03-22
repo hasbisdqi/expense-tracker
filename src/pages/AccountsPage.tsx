@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { LazyMotion, domAnimation, m } from "framer-motion";
 import { Plus, Trash2, Edit } from "lucide-react";
@@ -32,6 +33,7 @@ import { cn } from "@/lib/utils";
 import { useCurrency } from "@/contexts/CurrencyContext";
 
 export default function AccountsPage() {
+  const navigate = useNavigate();
   const accounts = useAccounts() || [];
   const { balances, totalBalance } = useAccountBalances();
   const { currency, formatValue } = useCurrency();
@@ -97,10 +99,11 @@ export default function AccountsPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
+                onClick={() => navigate('/transactions', { state: { accountId: account.id } })}
                 className={cn(
                   "p-4 rounded-xl bg-card border border-border/50",
                   "flex items-center gap-3",
-                  "hover:border-primary/20 transition-colors",
+                  "hover:border-primary/50 transition-colors cursor-pointer",
                 )}
               >
                 <CategoryIcon icon={account.icon} color={account.color} size="lg" />
@@ -117,15 +120,15 @@ export default function AccountsPage() {
                      variant="ghost"
                      size="icon"
                      className="h-8 w-8"
-                     onClick={() => setEditAccount(account)}
+                     onClick={(e) => { e.stopPropagation(); setEditAccount(account); }}
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() => handleDeleteClick(account)}
+                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={(e) => { e.stopPropagation(); handleDeleteClick(account); }}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

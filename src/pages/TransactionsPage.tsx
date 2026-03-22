@@ -26,12 +26,20 @@ export default function TransactionsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const initialSearch = location.state?.search || "";
+  const initialAccountId = location.state?.accountId || "";
+  const initialCategoryId = location.state?.categoryId || "";
 
   const [search, setSearch] = useState(initialSearch);
+  const [accountId, setAccountId] = useState(initialAccountId);
+  const [categoryId, setCategoryId] = useState(initialCategoryId);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
 
   const categories = useCategories();
-  const expenses = useFilteredExpenses({ search });
+  const expenses = useFilteredExpenses({ 
+    search,
+    accounts: accountId ? [accountId] : undefined,
+    categories: categoryId ? [categoryId] : undefined
+  });
 
   const handleExpenseClick = (expense: Expense) => {
     navigate(`/expense/${expense.id}`);
@@ -103,6 +111,28 @@ export default function TransactionsPage() {
               </button>
             )}
           </div>
+          {/* Active Filters */}
+          {(accountId || categoryId) && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {accountId && (
+                <div className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded-full">
+                  <span>Filtered by Account</span>
+                  <button onClick={() => setAccountId("")} className="hover:bg-primary/20 p-0.5 rounded-full ml-1">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+              {categoryId && (
+                <div className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded-full">
+                  <span>Filtered by Category</span>
+                  <button onClick={() => setCategoryId("")} className="hover:bg-primary/20 p-0.5 rounded-full ml-1">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {expenses.length > 0 && (
             <p className="text-xs text-muted-foreground mt-2">
               Showing {expenses.length} transaction

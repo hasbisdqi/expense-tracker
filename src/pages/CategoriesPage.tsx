@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { LazyMotion, domAnimation, m } from "framer-motion";
 import { Plus, Trash2, Edit, FolderOpen, Tag } from "lucide-react";
@@ -33,6 +34,7 @@ import { Category } from "@/types/expense";
 import { cn } from "@/lib/utils";
 
 export default function CategoriesPage() {
+  const navigate = useNavigate();
   const categories = useCategories();
   const expenseCounts = useCategoryExpenseCounts();
 
@@ -110,10 +112,11 @@ export default function CategoriesPage() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
+                    onClick={() => navigate('/transactions', { state: { categoryId: category.id } })}
                     className={cn(
                       "p-4 rounded-xl bg-card border border-border/50",
                       "flex items-center gap-3",
-                      "hover:border-primary/20 transition-colors",
+                      "hover:border-primary/50 transition-colors cursor-pointer",
                     )}
                   >
                     <CategoryIcon icon={category.icon} color={category.color} size="lg" />
@@ -130,15 +133,15 @@ export default function CategoriesPage() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => setEditCategory(category)}
+                        onClick={(e) => { e.stopPropagation(); setEditCategory(category); }}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => handleDeleteClick(category)}
+                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={(e) => { e.stopPropagation(); handleDeleteClick(category); }}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
