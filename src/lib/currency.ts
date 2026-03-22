@@ -9,6 +9,7 @@ export interface Currency {
  * Reference: https://www.xe.com/symbols/
  */
 export const SUPPORTED_CURRENCIES: Currency[] = [
+  { code: "IDR", symbol: "Rp. ", name: "Indonesian Rupiah", locale: "id-ID" },
   { code: "INR", symbol: "₹", name: "Indian Rupee", locale: "en-IN" },
   { code: "USD", symbol: "$", name: "US Dollar", locale: "en-US" },
   { code: "EUR", symbol: "€", name: "Euro", locale: "de-DE" },
