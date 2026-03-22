@@ -44,11 +44,11 @@ export function BottomNav() {
                   transition={{ type: "spring", stiffness: 500, damping: 35 }}
                 />
               )}
-              <Icon className={cn("h-5 w-5 relative z-10", isActive && "text-primary")} />
+              <Icon className={cn("h-5 w-5 relative z-10", isActive && "text-primary-foreground")} />
               <span
                 className={cn(
                   "text-[10px] mt-1 font-medium relative z-10",
-                  isActive && "text-primary",
+                  isActive && "text-primary-foreground",
                 )}
               >
                 {item.label}
