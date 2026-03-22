@@ -58,12 +58,12 @@ export default function TrendSection({
               dataKey="label"
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
             />
             <YAxis
               axisLine={false}
               tickLine={false}
-              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
               tickFormatter={(value) =>
                 `${currency.symbol}${value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value}`
               }
@@ -71,12 +71,12 @@ export default function TrendSection({
             <Tooltip
               formatter={(value: number) => [`${currency.symbol}${formatValue(value)}`, "Amount"]}
               contentStyle={{
-                backgroundColor: "hsl(var(--card))",
-                border: "1px solid hsl(var(--border))",
+                backgroundColor: "var(--card)",
+                border: "1px solid var(--border)",
                 borderRadius: "0.5rem",
               }}
             />
-            <Bar dataKey="amount" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="amount" fill="var(--primary)" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
