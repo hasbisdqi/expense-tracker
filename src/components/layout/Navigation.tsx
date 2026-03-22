@@ -128,7 +128,7 @@ export function SidebarNav() {
   return (
     <aside className="hidden lg:flex flex-col w-64 border-r border-border bg-card/50 p-4">
       <div className="mb-8">
-        <h1 className="text-xl font-bold gradient-text">Expense Tracker</h1>
+        <h1 className="text-xl font-bold gradient-text">Mamoni</h1>
         <p className="text-xs text-muted-foreground mt-1">Track your spending</p>
       </div>
 

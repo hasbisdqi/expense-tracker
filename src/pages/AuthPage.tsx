@@ -40,7 +40,7 @@ export default function AuthPage() {
           <div className="h-12 w-12 bg-primary rounded-xl flex items-center justify-center mb-4">
              <Wallet className="h-6 w-6 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Expense Tracker</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Mamoni</h1>
           <p className="text-sm text-muted-foreground">Sign in to securely sync your data across devices.</p>
         </div>
 
