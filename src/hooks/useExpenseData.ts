@@ -76,6 +76,21 @@ export function useFilteredExpenses(filters: ExpenseFilters = {}) {
       });
     }
 
+    // Account filter
+    if (filters.accounts && filters.accounts.length > 0) {
+      filtered = filtered.filter((expense) => {
+        if (expense.type === "transfer" && expense.toAccountId) {
+          return filters.accounts!.includes(expense.accountId) || filters.accounts!.includes(expense.toAccountId);
+        }
+        return filters.accounts!.includes(expense.accountId);
+      });
+    }
+
+    // Type filter
+    if (filters.types && filters.types.length > 0) {
+      filtered = filtered.filter((expense) => filters.types!.includes(expense.type || "expense"));
+    }
+
     // Category filter
     if (filters.categories && filters.categories.length > 0) {
       filtered = filtered.filter((expense) => filters.categories!.includes(expense.category));
@@ -113,14 +128,20 @@ export function useAnalysisSummary(filters: ExpenseFilters): AnalysisSummary {
   const categories = useCategories();
 
   return useMemo(() => {
-    const totalExpenses = filteredExpenses.reduce((sum, exp) => sum + exp.value, 0);
+    const expensesOnly = filteredExpenses.filter((exp) => exp.type === "expense" || !exp.type);
+    const incomeOnly = filteredExpenses.filter((exp) => exp.type === "income");
+
+    const totalExpenses = expensesOnly.reduce((sum, exp) => sum + exp.value, 0);
+    const totalIncome = incomeOnly.reduce((sum, exp) => sum + exp.value, 0);
     const totalTransactions = filteredExpenses.length;
-    const averageExpense = totalTransactions > 0 ? totalExpenses / totalTransactions : 0;
+    
+    const expenseCount = expensesOnly.length;
+    const averageExpense = expenseCount > 0 ? totalExpenses / expenseCount : 0;
 
     // Category breakdown
     const categoryTotals: Record<string, { total: number; count: number }> = {};
 
-    for (const expense of filteredExpenses) {
+    for (const expense of expensesOnly) {
       if (!categoryTotals[expense.category]) {
         categoryTotals[expense.category] = { total: 0, count: 0 };
       }
@@ -145,10 +166,10 @@ export function useAnalysisSummary(filters: ExpenseFilters): AnalysisSummary {
 
     const topCategory = categoryBreakdown[0] || null;
 
-    // Daily trend
+    // Daily trend (Expenses only)
     const dailyTotals: Record<string, { total: number; count: number }> = {};
 
-    for (const expense of filteredExpenses) {
+    for (const expense of expensesOnly) {
       if (!dailyTotals[expense.date]) {
         dailyTotals[expense.date] = { total: 0, count: 0 };
       }
@@ -162,6 +183,7 @@ export function useAnalysisSummary(filters: ExpenseFilters): AnalysisSummary {
 
     return {
       totalExpenses,
+      totalIncome,
       totalTransactions,
       averageExpense,
       topCategory,
@@ -171,7 +193,7 @@ export function useAnalysisSummary(filters: ExpenseFilters): AnalysisSummary {
   }, [filteredExpenses, categories]);
 }
 
-export function useMonthSummary() {
+export function useMonthSummary(accountId?: string) {
   const expenses = useExpenses();
 
   return useMemo(() => {
@@ -179,21 +201,32 @@ export function useMonthSummary() {
     const monthStart = startOfMonth(now);
     const monthEnd = endOfMonth(now);
 
-    let total = 0;
+    let totalExpense = 0;
+    let totalIncome = 0;
     let totalExcludingAdhoc = 0;
 
     for (const expense of expenses) {
+      if (accountId && expense.accountId !== accountId && expense.toAccountId !== accountId) {
+        continue;
+      }
+
       const expenseDate = parseISO(expense.date);
       if (isWithinInterval(expenseDate, { start: monthStart, end: monthEnd })) {
-        total += expense.value;
-        if (!expense.isAdhoc) {
-          totalExcludingAdhoc += expense.value;
+        if (expense.type === "expense" || !expense.type) {
+          totalExpense += expense.value;
+          if (!expense.isAdhoc) {
+            totalExcludingAdhoc += expense.value;
+          }
+        } else if (expense.type === "income") {
+          totalIncome += expense.value;
         }
       }
     }
 
     return {
-      total,
+      total: totalExpense, // backward compatible name for UI
+      totalExpense,
+      totalIncome,
       totalExcludingAdhoc,
       monthStart,
       monthEnd,
@@ -201,12 +234,16 @@ export function useMonthSummary() {
   }, [expenses]);
 }
 
-export function useRecentExpenses(limit: number = 10) {
+export function useRecentExpenses(limit: number = 10, accountId?: string) {
   const expenses = useExpenses();
 
   return useMemo(() => {
-    return expenses.slice(0, limit);
-  }, [expenses, limit]);
+    let filtered = expenses;
+    if (accountId) {
+      filtered = filtered.filter(e => e.accountId === accountId || e.toAccountId === accountId);
+    }
+    return filtered.slice(0, limit);
+  }, [expenses, limit, accountId]);
 }
 
 export function getDateRangeForPeriod(

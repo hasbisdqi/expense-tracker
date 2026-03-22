@@ -5,13 +5,14 @@ import { LazyMotion, domAnimation, m } from "framer-motion";
 
 const navItems = [
   { path: "/", icon: Home, label: "Home" },
+  { path: "/accounts", icon: FolderOpen, label: "Accounts" },
   { path: "/categories", icon: FolderOpen, label: "Categories" },
   { path: "/analysis", icon: BarChart3, label: "Analysis" },
-  { path: "/settings", icon: Settings, label: "Settings" },
 ];
 
 const sidebarNavItems = [
   { path: "/", icon: Home, label: "Home" },
+  { path: "/accounts", icon: FolderOpen, label: "Accounts" },
   { path: "/categories", icon: FolderOpen, label: "Categories" },
   { path: "/analysis", icon: BarChart3, label: "Analysis" },
   { path: "/transactions", icon: FolderOpen, label: "All Transactions" },

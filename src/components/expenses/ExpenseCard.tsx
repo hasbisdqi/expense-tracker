@@ -5,6 +5,7 @@ import { CategoryIcon } from "@/components/categories/CategoryIcon";
 import { Expense, Category } from "@/types/expense";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { useAccounts } from "@/hooks/useAccounts";
 import { Paperclip, Copy, Edit, Trash2 } from "lucide-react";
 import {
   ContextMenu,
@@ -32,6 +33,10 @@ export function ExpenseCard({
   onDelete,
   showDate = true,
 }: ExpenseCardProps) {
+  const accounts = useAccounts() || [];
+  const account = accounts.find((a) => a.id === expense.accountId);
+  const toAccount = accounts.find((a) => a.id === expense.toAccountId);
+
   const [isLongPressing, setIsLongPressing] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -79,23 +84,22 @@ export function ExpenseCard({
       onMouseLeave={handleTouchEnd}
     >
       <CategoryIcon
-        icon={category?.icon || "MoreHorizontal"}
-        color={category?.color || "#64748B"}
+        icon={expense.type === "transfer" ? "ArrowLeftRight" : (category?.icon || "MoreHorizontal")}
+        color={expense.type === "transfer" ? "#64748B" : (category?.color || "#64748B")}
         size="md"
       />
 
       <div className="flex-1 min-w-0">
         <p className="font-medium text-sm truncate overflow-ellipsis whitespace-nowrap max-w-50 sm:max-w-[16rem]">
-          {expense.description || category?.name || "Expense"}
+          {expense.description || (expense.type === "transfer" ? `Transfer to ${toAccount?.name || "?"}` : category?.name) || "Transaction"}
         </p>
-        <div className="flex items-center gap-2 mt-0.5">
+        <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
+          <span className="truncate max-w-[6rem] font-medium text-foreground/80">{account?.name || "Account"}</span>
           {showDate && (
-            <span className="text-xs text-muted-foreground">
-              {formatRelativeDate(expense.date)}
-            </span>
+            <span>• {formatRelativeDate(expense.date)}</span>
           )}
           {expense.tags.length > 0 && (
-            <div className="flex items-center gap-1 overflow-hidden">
+            <div className="flex items-center gap-1 overflow-hidden ml-1 border-l border-border pl-2">
               {expense.tags.slice(0, 2).map((tag) => (
                 <span key={tag} className="tag-badge text-[10px] truncate max-w-20">
                   {tag}
@@ -113,7 +117,7 @@ export function ExpenseCard({
 
       <div className="flex flex-col items-end gap-1">
         <span className="font-semibold text-sm">
-          <ExpenseValue value={expense.value} />
+          <ExpenseValue expense={expense} />
         </span>
         <div className="flex items-center gap-1">
           {expense.isAdhoc && <span className="adhoc-badge text-[10px]">Adhoc</span>}
@@ -144,13 +148,20 @@ export function ExpenseCard({
   );
 }
 
-function ExpenseValue({ value }: { value: number }) {
+function ExpenseValue({ expense }: { expense: Expense }) {
   const { currency, formatValue } = useCurrency();
+  const isIncome = expense.type === "income";
+  const isTransfer = expense.type === "transfer";
+
   return (
-    <>
+    <span className={cn(
+      isIncome && "text-emerald-500",
+      isTransfer && "text-muted-foreground"
+    )}>
+      {isIncome ? "+" : isTransfer ? "" : "-"}
       {currency.symbol}
-      {formatValue(value)}
-    </>
+      {formatValue(expense.value)}
+    </span>
   );
 }
 

@@ -1,5 +1,5 @@
 import Dexie, { Table } from "dexie";
-import { Expense, Category, TagMetadata } from "@/types/expense";
+import { Expense, Category, TagMetadata, Account } from "@/types/expense";
 import { v4 as uuidv4 } from "uuid";
 
 // Category colors palette
@@ -62,6 +62,7 @@ class ExpenseDatabase extends Dexie {
   expenses!: Table<Expense, string>;
   categories!: Table<Category, string>;
   tagMetadata!: Table<TagMetadata, string>;
+  accounts!: Table<Account, string>;
 
   constructor() {
     super("ExpenseTrackerDB");
@@ -79,17 +80,66 @@ class ExpenseDatabase extends Dexie {
       categories: "id, &name",
       tagMetadata: "tag, count, lastUsed",
     });
+
+    // Version 3: add accounts, update expenses to include type and accountId
+    this.version(3).stores({
+      expenses: "id, category, accountId, type, date, time, [date+time], isAdhoc, *tags, createdAt",
+      categories: "id, &name",
+      tagMetadata: "tag, count, lastUsed",
+      accounts: "id, &name",
+    }).upgrade(async (trans) => {
+      let defaultAccountId = "";
+      const accountsCount = await trans.table("accounts").count();
+      if (accountsCount === 0) {
+        defaultAccountId = uuidv4();
+        await trans.table("accounts").add({
+          name: "Main",
+          icon: "Wallet",
+          color: "#3B82F6",
+          id: defaultAccountId,
+          createdAt: new Date().toISOString(),
+        });
+      } else {
+        const firstAccount = await trans.table("accounts").toCollection().first();
+        if (firstAccount) defaultAccountId = firstAccount.id;
+      }
+
+      if (defaultAccountId) {
+        await trans.table("expenses").toCollection().modify((expense) => {
+          if (!expense.type) expense.type = "expense";
+          if (!expense.accountId) expense.accountId = defaultAccountId;
+        });
+      }
+    });
   }
 }
 
 export const db = new ExpenseDatabase();
 
-// Initialize database with default categories
+// Default account to seed if missing
+export const DEFAULT_ACCOUNT: Omit<Account, "id" | "createdAt"> = {
+  name: "Main",
+  icon: "Wallet",
+  color: "#3B82F6",
+};
+
+// Initialize database with default categories and accounts
 export async function initializeDatabase(): Promise<void> {
   const categoryCount = await db.categories.count();
+  const accountCount = await db.accounts.count();
+
+  const now = new Date().toISOString();
+
+  if (accountCount === 0) {
+    await db.accounts.add({
+      ...DEFAULT_ACCOUNT,
+      id: uuidv4(),
+      createdAt: now,
+    });
+    console.log("Default account initialized");
+  }
 
   if (categoryCount === 0) {
-    const now = new Date().toISOString();
     const categories: Category[] = DEFAULT_CATEGORIES.map((cat) => ({
       ...cat,
       id: uuidv4(),
@@ -212,6 +262,67 @@ export async function getCategoryByName(name: string): Promise<Category | undefi
   return db.categories.where("name").equals(name).first();
 }
 
+// Account CRUD operations
+export async function addAccount(account: Omit<Account, "id" | "createdAt">): Promise<string> {
+  const id = uuidv4();
+  const now = new Date().toISOString();
+
+  await db.accounts.add({
+    ...account,
+    id,
+    createdAt: now,
+  });
+
+  return id;
+}
+
+export async function updateAccount(
+  id: string,
+  updates: Partial<Omit<Account, "id" | "createdAt">>,
+): Promise<void> {
+  await db.accounts.update(id, updates);
+}
+
+export async function deleteAccount(id: string, moveToAccountId?: string): Promise<void> {
+  const accountCount = await db.accounts.count();
+  if (accountCount <= 1) {
+    throw new Error('Cannot delete the last account');
+  }
+
+  if (moveToAccountId) {
+    // Move all expenses to the target account
+    const expenses = await db.expenses.where("accountId").equals(id).toArray();
+    for (const exp of expenses) {
+      await db.expenses.update(exp.id, { accountId: moveToAccountId });
+    }
+    const transfersTo = await db.expenses.filter(e => e.type === "transfer" && e.toAccountId === id).toArray();
+    for (const transfer of transfersTo) {
+      await db.expenses.update(transfer.id, { toAccountId: moveToAccountId });
+    }
+  } else {
+    // Delete all transactions linked to this account
+    await db.expenses.where("accountId").equals(id).delete();
+    const transfersTo = await db.expenses.filter(e => e.type === "transfer" && e.toAccountId === id).toArray();
+    for (const transfer of transfersTo) {
+      await db.expenses.delete(transfer.id);
+    }
+  }
+
+  await db.accounts.delete(id);
+}
+
+export async function getAccount(id: string): Promise<Account | undefined> {
+  return db.accounts.get(id);
+}
+
+export async function getAllAccounts(): Promise<Account[]> {
+  return db.accounts.toArray();
+}
+
+export async function getAccountByName(name: string): Promise<Account | undefined> {
+  return db.accounts.where("name").equals(name).first();
+}
+
 // Tag operations
 async function updateTagMetadata(tag: string): Promise<void> {
   const existing = await db.tagMetadata.get(tag);
@@ -306,25 +417,41 @@ export async function getCategoryExpenseCounts(): Promise<Record<string, number>
 export async function exportAllData(): Promise<{
   expenses: Expense[];
   categories: Category[];
+  accounts: Account[];
 }> {
   const expenses = await db.expenses.toArray();
   const categories = await db.categories.toArray();
-  return { expenses, categories };
+  const accounts = await db.accounts.toArray();
+  return { expenses, categories, accounts };
 }
 
 // Import data
 export async function importData(data: {
   expenses: Expense[];
   categories: Category[];
+  accounts?: Account[];
 }): Promise<void> {
-  await db.transaction("rw", [db.expenses, db.categories, db.tagMetadata], async () => {
+  await db.transaction("rw", [db.expenses, db.categories, db.tagMetadata, db.accounts], async () => {
     // Clear existing data
     await db.expenses.clear();
     await db.categories.clear();
     await db.tagMetadata.clear();
+    await db.accounts.clear();
 
     // Import categories
     await db.categories.bulkAdd(data.categories);
+
+    // Import accounts
+    if (data.accounts && data.accounts.length > 0) {
+      await db.accounts.bulkAdd(data.accounts);
+    } else {
+      // Fallback
+      await db.accounts.add({
+        ...DEFAULT_ACCOUNT,
+        id: uuidv4(),
+        createdAt: new Date().toISOString()
+      });
+    }
 
     // Import expenses and rebuild tag metadata
     await db.expenses.bulkAdd(data.expenses);

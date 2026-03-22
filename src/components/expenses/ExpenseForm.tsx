@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -20,15 +21,17 @@ import {
 } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CategoryIcon } from "@/components/categories/CategoryIcon";
-import { ExpenseFormData, Expense } from "@/types/expense";
+import { AccountForm } from "@/components/accounts/AccountForm";
+import { ExpenseFormData, Expense, TransactionType } from "@/types/expense";
 import { useCategories } from "@/hooks/useExpenseData";
+import { useAccounts } from "@/hooks/useAccounts";
 import {
   addExpense,
   updateExpense,
   getTagSuggestions,
   getDescriptionSuggestions,
 } from "@/db/expenseTrackerDb";
-import { CalendarIcon, Clock, Plus, X, ImagePlus, Trash2 } from "lucide-react";
+import { CalendarIcon, Clock, Plus, X, ImagePlus, Trash2, ArrowLeftRight, TrendingDown, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CategoryForm } from "@/components/categories/CategoryForm";
 import imageCompression from "browser-image-compression";
@@ -36,18 +39,37 @@ import { toast } from "sonner";
 import { useCurrency } from "@/contexts/CurrencyContext";
 
 const expenseSchema = z.object({
+  type: z.enum(["expense", "income", "transfer"]),
+  accountId: z.string().min(1, "Account required"),
+  toAccountId: z.string().optional(),
   value: z
-    .number({ error: "Amount is required" })
+    .number({ invalid_type_error: "Amount is required" } as any)
     .positive("Must be positive")
     .max(10000000, "Maximum 10,000,000"),
-  category: z.string().min(1, "Category required"),
+  category: z.string(),
   description: z.string().optional(),
   tags: z.array(z.string()).max(4, "Maximum 4 tags"),
   date: z.string(),
   time: z.string(),
   isAdhoc: z.boolean(),
   attachment: z.string().optional(),
-});
+}).refine(
+  (data) => {
+    if (data.type === "transfer") {
+      return !!data.toAccountId && data.accountId !== data.toAccountId;
+    }
+    return true;
+  },
+  { message: "Valid destination account required", path: ["toAccountId"] }
+).refine(
+  (data) => {
+    if (data.type !== "transfer" && (!data.category || data.category.length === 0)) {
+       return false;
+    }
+    return true;
+  },
+  { message: "Category required", path: ["category"] }
+);
 
 interface ExpenseFormProps {
   expense?: Expense;
@@ -56,10 +78,13 @@ interface ExpenseFormProps {
   onCancel?: () => void;
 }
 
-function initDefaults(expense?: Expense, duplicate?: Expense): ExpenseFormData {
+function initDefaults(expense?: Expense, duplicate?: Expense, defaultAccountId?: string): ExpenseFormData {
   const now = new Date();
   const state = expense ??
     duplicate ?? {
+      type: "expense" as TransactionType,
+      accountId: defaultAccountId || "",
+      toAccountId: "",
       value: null,
       category: "",
       description: "",
@@ -68,30 +93,37 @@ function initDefaults(expense?: Expense, duplicate?: Expense): ExpenseFormData {
       time: getCurrentTime24(),
       isAdhoc: false,
       attachment: undefined,
-    };
+    } as any;
 
   return {
+    type: state.type || "expense",
+    accountId: state.accountId || defaultAccountId || "",
+    toAccountId: state.toAccountId || "",
     value: state.value,
-    category: state.category,
+    category: state.category || "",
     description: state.description || "",
-    tags: state.tags,
+    tags: state.tags || [],
     date: state.date,
     time: state.time,
-    isAdhoc: state.isAdhoc,
+    isAdhoc: state.isAdhoc || false,
     attachment: state.attachment,
   };
 }
 
 export function ExpenseForm({ expense, duplicate, onSuccess, onCancel }: ExpenseFormProps) {
   const categories = useCategories();
+  const accounts = useAccounts() || [];
+  const defaultAccountId = accounts.length > 0 ? accounts[0].id : "";
+
   const [tagInput, setTagInput] = useState("");
   const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
   const [descriptionSuggestions, setDescriptionSuggestions] = useState<string[]>([]);
   const [showDescriptionDropdown, setShowDescriptionDropdown] = useState(false);
   const [showCategoryDialog, setShowCategoryDialog] = useState(false);
+  const [showAccountDialog, setShowAccountDialog] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | undefined>(expense?.attachment);
 
-  const defaultValues: ExpenseFormData = initDefaults(expense, duplicate);
+  const defaultValues: ExpenseFormData = initDefaults(expense, duplicate, defaultAccountId);
   const { currency } = useCurrency();
 
   const {
@@ -108,6 +140,8 @@ export function ExpenseForm({ expense, duplicate, onSuccess, onCancel }: Expense
 
   const tags = watch("tags");
   const description = watch("description");
+  const currentType = watch("type");
+  const currentAccountId = watch("accountId");
 
   // Load tag suggestions
   useEffect(() => {
@@ -200,17 +234,145 @@ export function ExpenseForm({ expense, duplicate, onSuccess, onCancel }: Expense
 
   // Set default category if not set
   useEffect(() => {
-    if (!expense && categories.length > 0 && !watch("category")) {
-      const othersCategory = categories.find((c) => c.name === "Others");
+    if (!expense && !watch("category")) {
+      const othersCategory = categories?.find((c) => c.name === "Others");
       if (othersCategory) {
         setValue("category", othersCategory.id);
       }
     }
   }, [categories, expense, setValue, watch]);
 
+  // Set default account if available and not set
+  useEffect(() => {
+    if (!expense && !watch("accountId") && accounts.length > 0) {
+      setValue("accountId", accounts[0].id);
+    }
+  }, [accounts, expense, setValue, watch]);
+
+  const handleAccountCreated = (id: string) => {
+    setValue("accountId", id);
+    setShowAccountDialog(false);
+  };
+
   return (
     <>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-6">
+        {/* Type Tabs */}
+        <Controller
+          control={control}
+          name="type"
+          render={({ field }) => (
+            <Tabs value={field.value} onValueChange={(val) => {
+              field.onChange(val as TransactionType);
+              if (val === "transfer") {
+                setValue("category", "");
+                setValue("isAdhoc", false);
+              }
+            }} className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="expense" className="flex items-center gap-1">
+                  <TrendingDown className="h-4 w-4" /> Expense
+                </TabsTrigger>
+                <TabsTrigger value="income" className="flex items-center gap-1">
+                  <TrendingUp className="h-4 w-4" /> Income
+                </TabsTrigger>
+                <TabsTrigger value="transfer" className="flex items-center gap-1">
+                  <ArrowLeftRight className="h-4 w-4" /> Transfer
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+        />
+
+        {/* Account Selection */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>{currentType === "transfer" ? "From Account" : "Account"}</Label>
+            <Controller
+              control={control}
+              name="accountId"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select account">
+                      {field.value && accounts.find((a) => a.id === field.value) && (
+                        <div className="flex items-center gap-2">
+                          <CategoryIcon
+                            icon={accounts.find((a) => a.id === field.value)!.icon}
+                            color={accounts.find((a) => a.id === field.value)!.color}
+                            size="sm"
+                          />
+                          <span className="truncate">{accounts.find((a) => a.id === field.value)!.name}</span>
+                        </div>
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        <div className="flex items-center gap-2">
+                          <CategoryIcon icon={account.icon} color={account.color} size="sm" />
+                          <span className="truncate">{account.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                    <div className="border-t border-border mt-1 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setShowAccountDialog(true)}
+                        className="flex items-center gap-2 w-full px-2 py-1.5 text-sm text-primary hover:bg-accent rounded"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Create New Account
+                      </button>
+                    </div>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.accountId && <p className="text-sm text-destructive">{errors.accountId.message}</p>}
+          </div>
+
+          {currentType === "transfer" && (
+            <div className="space-y-2">
+              <Label>To Account</Label>
+              <Controller
+                control={control}
+                name="toAccountId"
+                render={({ field }) => (
+                  <Select value={field.value || ""} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select destination">
+                        {field.value && accounts.find((a) => a.id === field.value) && (
+                          <div className="flex items-center gap-2">
+                            <CategoryIcon
+                              icon={accounts.find((a) => a.id === field.value)!.icon}
+                              color={accounts.find((a) => a.id === field.value)!.color}
+                              size="sm"
+                            />
+                            <span className="truncate">{accounts.find((a) => a.id === field.value)!.name}</span>
+                          </div>
+                        )}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {accounts.filter(a => a.id !== currentAccountId).map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          <div className="flex items-center gap-2">
+                            <CategoryIcon icon={account.icon} color={account.color} size="sm" />
+                            <span className="truncate">{account.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.toAccountId && <p className="text-sm text-destructive">{errors.toAccountId.message}</p>}
+            </div>
+          )}
+        </div>
+
         {/* Value Input */}
         <div className="space-y-2">
           <Label htmlFor="value">Amount</Label>
@@ -234,52 +396,54 @@ export function ExpenseForm({ expense, duplicate, onSuccess, onCancel }: Expense
         </div>
 
         {/* Category Select */}
-        <div className="space-y-2">
-          <Label>Category</Label>
-          <Controller
-            control={control}
-            name="category"
-            render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select category">
-                    {field.value && categories.find((c) => c.id === field.value) && (
-                      <div className="flex items-center gap-2">
-                        <CategoryIcon
-                          icon={categories.find((c) => c.id === field.value)!.icon}
-                          color={categories.find((c) => c.id === field.value)!.color}
-                          size="sm"
-                        />
-                        <span>{categories.find((c) => c.id === field.value)!.name}</span>
-                      </div>
-                    )}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      <div className="flex items-center gap-2">
-                        <CategoryIcon icon={category.icon} color={category.color} size="sm" />
-                        <span>{category.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                  <div className="border-t border-border mt-1 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => setShowCategoryDialog(true)}
-                      className="flex items-center gap-2 w-full px-2 py-1.5 text-sm text-primary hover:bg-accent rounded"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Create New Category
-                    </button>
-                  </div>
-                </SelectContent>
-              </Select>
-            )}
-          />
-          {errors.category && <p className="text-sm text-destructive">{errors.category.message}</p>}
-        </div>
+        {currentType !== "transfer" && (
+          <div className="space-y-2">
+            <Label>Category</Label>
+            <Controller
+              control={control}
+              name="category"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category">
+                      {field.value && categories.find((c) => c.id === field.value) && (
+                        <div className="flex items-center gap-2">
+                          <CategoryIcon
+                            icon={categories.find((c) => c.id === field.value)!.icon}
+                            color={categories.find((c) => c.id === field.value)!.color}
+                            size="sm"
+                          />
+                          <span>{categories.find((c) => c.id === field.value)!.name}</span>
+                        </div>
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        <div className="flex items-center gap-2">
+                          <CategoryIcon icon={category.icon} color={category.color} size="sm" />
+                          <span>{category.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                    <div className="border-t border-border mt-1 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setShowCategoryDialog(true)}
+                        className="flex items-center gap-2 w-full px-2 py-1.5 text-sm text-primary hover:bg-accent rounded"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Create New Category
+                      </button>
+                    </div>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.category && <p className="text-sm text-destructive">{errors.category.message}</p>}
+          </div>
+        )}
 
         {/* Description */}
         <div className="space-y-2 relative">
@@ -431,23 +595,25 @@ export function ExpenseForm({ expense, duplicate, onSuccess, onCancel }: Expense
         </div>
 
         {/* Is Adhoc */}
-        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-xl">
-          <div className="space-y-0.5">
-            <Label htmlFor="isAdhoc" className="cursor-pointer">
-              Adhoc Expense
-            </Label>
-            <p className="text-xs text-muted-foreground">
-              Exclude from monthly analysis (vacations, big purchases)
-            </p>
+        {currentType !== "transfer" && (
+          <div className="flex items-center justify-between p-4 bg-muted/50 rounded-xl">
+            <div className="space-y-0.5">
+              <Label htmlFor="isAdhoc" className="cursor-pointer">
+                Adhoc Expense
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Exclude from monthly analysis (vacations, big purchases)
+              </p>
+            </div>
+            <Controller
+              control={control}
+              name="isAdhoc"
+              render={({ field }) => (
+                <Switch id="isAdhoc" checked={field.value} onCheckedChange={field.onChange} />
+              )}
+            />
           </div>
-          <Controller
-            control={control}
-            name="isAdhoc"
-            render={({ field }) => (
-              <Switch id="isAdhoc" checked={field.value} onCheckedChange={field.onChange} />
-            )}
-          />
-        </div>
+        )}
 
         {/* Attachment */}
         <div className="space-y-2">
@@ -496,6 +662,18 @@ export function ExpenseForm({ expense, duplicate, onSuccess, onCancel }: Expense
           <CategoryForm
             onSuccess={handleCategoryCreated}
             onCancel={() => setShowCategoryDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAccountDialog} onOpenChange={setShowAccountDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Account</DialogTitle>
+          </DialogHeader>
+          <AccountForm
+            onSuccess={handleAccountCreated}
+            onCancel={() => setShowAccountDialog(false)}
           />
         </DialogContent>
       </Dialog>

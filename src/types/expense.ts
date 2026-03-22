@@ -1,9 +1,22 @@
 // Expense Tracker Type Definitions
 
+export type TransactionType = "expense" | "income" | "transfer";
+
+export interface Account {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  createdAt: string;
+}
+
 export interface Expense {
   id: string;
+  type: TransactionType;
+  accountId: string;
+  toAccountId?: string; // used for transfers
   value: number;
-  category: string; // Category ID
+  category: string; // Category ID (can be empty string for transfers)
   description?: string;
   tags: string[];
   date: string; // ISO date string (YYYY-MM-DD)
@@ -30,7 +43,16 @@ export interface TagMetadata {
 }
 
 // Form types
+export interface AccountFormData {
+  name: string;
+  icon: string;
+  color: string;
+}
+
 export interface ExpenseFormData {
+  type: TransactionType;
+  accountId: string;
+  toAccountId?: string;
   value: number | null;
   category: string;
   description?: string;
@@ -58,6 +80,8 @@ export interface DateRange {
 export interface ExpenseFilters {
   search?: string;
   categories?: string[];
+  accounts?: string[];
+  types?: TransactionType[];
   tags?: string[];
   dateRange?: DateRange;
   includeAdhoc?: boolean;
@@ -83,6 +107,7 @@ export interface DailySummary {
 
 export interface AnalysisSummary {
   totalExpenses: number;
+  totalIncome: number;
   totalTransactions: number;
   averageExpense: number;
   topCategory: CategorySummary | null;

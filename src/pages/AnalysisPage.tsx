@@ -18,10 +18,11 @@ import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CategoryIcon } from "@/components/categories/CategoryIcon";
 import { cn } from "@/lib/utils";
 import { useAnalysisSummary, useCategories, getDateRangeForPeriod } from "@/hooks/useExpenseData";
+import { useAccounts } from "@/hooks/useAccounts";
 import { exportAllData } from "@/db/expenseTrackerDb";
 import { TimePeriod, ExpenseFilters, DateRange } from "@/types/expense";
 import { toast } from "sonner";
@@ -44,9 +45,11 @@ export default function AnalysisPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [customRange, setCustomRange] = useState<DateRange | undefined>();
   const [excludeAdhoc, setExcludeAdhoc] = useState(true);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>("all");
   const [trendGranularity, setTrendGranularity] = useState<TrendGranularity>("day");
   const [showExportDialog, setShowExportDialog] = useState(false);
   const categories = useCategories();
+  const accounts = useAccounts() || [];
 
   // Compute date range from period + anchor
   const dateRange = useMemo(() => {
@@ -62,6 +65,7 @@ export default function AnalysisPage() {
   const filters: ExpenseFilters = {
     dateRange,
     includeAdhoc: !excludeAdhoc,
+    accounts: selectedAccountId === "all" ? undefined : [selectedAccountId],
   };
 
   const summary = useAnalysisSummary(filters);
@@ -315,12 +319,35 @@ export default function AnalysisPage() {
             </div>
           )}
 
-          {/* Exclude Adhoc toggle */}
-          <div className="flex items-center justify-between">
-            <Label htmlFor="exclude-adhoc" className="cursor-pointer text-sm">
-              Exclude Adhoc Expenses
-            </Label>
-            <Switch id="exclude-adhoc" checked={excludeAdhoc} onCheckedChange={setExcludeAdhoc} />
+          {/* Exclude Adhoc toggle and account selector */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-between mt-2 pt-2 border-t border-border/50">
+            <div className="flex items-center gap-2">
+              <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                <SelectTrigger className="w-[160px] h-9 text-xs">
+                  <SelectValue placeholder="All Accounts">
+                    {selectedAccountId === "all" ? "All Accounts" : accounts.find(a => a.id === selectedAccountId)?.name}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Accounts</SelectItem>
+                  {accounts.map(account => (
+                    <SelectItem key={account.id} value={account.id}>
+                      <div className="flex items-center gap-2">
+                        <CategoryIcon icon={account.icon} color={account.color} size="sm" />
+                        {account.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Label htmlFor="exclude-adhoc" className="cursor-pointer text-sm">
+                Exclude Adhoc
+              </Label>
+              <Switch id="exclude-adhoc" checked={excludeAdhoc} onCheckedChange={setExcludeAdhoc} />
+            </div>
           </div>
         </m.div>
 
@@ -332,15 +359,26 @@ export default function AnalysisPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="grid grid-cols-2 lg:grid-cols-4 gap-3"
+              className="grid grid-cols-2 lg:grid-cols-5 gap-3"
             >
               <div className="p-4 bg-card rounded-xl border border-border/50">
                 <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                  <TrendingUp className="h-4 w-4 text-emerald-500" />
+                  <span className="text-xs">Income</span>
+                </div>
+                <p className="text-xl font-bold text-emerald-500">
+                  +{currency.symbol}
+                  {formatValue(summary.totalIncome)}
+                </p>
+              </div>
+
+              <div className="p-4 bg-card rounded-xl border border-border/50">
+                <div className="flex items-center gap-2 text-muted-foreground mb-1">
                   <Wallet className="h-4 w-4" />
-                  <span className="text-xs">Total</span>
+                  <span className="text-xs">Expenses</span>
                 </div>
                 <p className="text-xl font-bold">
-                  {currency.symbol}
+                  -{currency.symbol}
                   {formatValue(summary.totalExpenses)}
                 </p>
               </div>

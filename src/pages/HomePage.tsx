@@ -5,9 +5,12 @@ import { format } from "date-fns";
 import { getCurrentTime24 } from "@/lib/time";
 import { Plus, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CategoryIcon } from "@/components/categories/CategoryIcon";
 import { ExpenseList } from "@/components/expenses/ExpenseCard";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import { useMonthSummary, useRecentExpenses, useCategories } from "@/hooks/useExpenseData";
+import { useAccountBalances, useAccounts } from "@/hooks/useAccounts";
 import { deleteExpense } from "@/db/expenseTrackerDb";
 import { toast } from "sonner";
 import {
@@ -40,12 +43,20 @@ export function FloatingActionButton() {
 export default function HomePage() {
   const navigate = useNavigate();
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>("all");
   const isMobile = useIsMobile();
 
-  const { total, totalExcludingAdhoc, monthStart, monthEnd } = useMonthSummary();
+  const accounts = useAccounts() || [];
+  const { balances, totalBalance } = useAccountBalances();
+  
+  const displayBalance = selectedAccountId === "all" ? totalBalance : (balances[selectedAccountId] || 0);
+
+  const { totalExpense, totalIncome, monthStart, monthEnd } = useMonthSummary(
+    selectedAccountId === "all" ? undefined : selectedAccountId
+  );
   const { currency, formatValue } = useCurrency();
   const categories = useCategories();
-  const displayExpenses = useRecentExpenses(10);
+  const displayExpenses = useRecentExpenses(10, selectedAccountId === "all" ? undefined : selectedAccountId);
 
   const handleExpenseClick = (expense: Expense) => {
     navigate(`/expense/${expense.id}`);
@@ -85,22 +96,46 @@ export default function HomePage() {
         <m.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="summary-card"
+          className="summary-card space-y-4"
         >
-          <p className="text-sm opacity-80">This Month's Expenses</p>
-          <p className="text-3xl font-bold mt-1">
-            {currency.symbol}
-            {formatValue(total)}
-          </p>
-          {totalExcludingAdhoc !== total && (
-            <p className="text-sm opacity-70 mt-1">
-              Excluding Adhoc: {currency.symbol}
-              {formatValue(totalExcludingAdhoc)}
-            </p>
-          )}
-          <p className="text-xs opacity-60 mt-2">
-            {format(monthStart, "d MMM")} - {format(monthEnd, "d MMM yyyy")}
-          </p>
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <p className="text-sm opacity-80 font-medium">Total Balance</p>
+              <p className="text-3xl font-bold">
+                {displayBalance < 0 ? "-" : ""}{currency.symbol}{formatValue(Math.abs(displayBalance))}
+              </p>
+            </div>
+            
+            <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+              <SelectTrigger className="w-[140px] h-9 bg-background/20 border-primary-foreground/20 text-primary-foreground text-xs shadow-none hover:bg-background/30 transition-colors">
+                <SelectValue placeholder="All Accounts">
+                  {selectedAccountId === "all" ? "All Accounts" : accounts.find(a => a.id === selectedAccountId)?.name}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Accounts</SelectItem>
+                {accounts.map(account => (
+                  <SelectItem key={account.id} value={account.id}>
+                    <div className="flex items-center gap-2">
+                      <CategoryIcon icon={account.icon} color={account.color} size="sm" />
+                      {account.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-primary-foreground/20">
+            <div>
+              <p className="text-xs opacity-80">Income (This Month)</p>
+              <p className="text-lg font-semibold">+{currency.symbol}{formatValue(totalIncome)}</p>
+            </div>
+            <div>
+              <p className="text-xs opacity-80">Expenses (This Month)</p>
+              <p className="text-lg font-semibold">-{currency.symbol}{formatValue(totalExpense)}</p>
+            </div>
+          </div>
         </m.div>
 
         {/* Recent Transactions */}
