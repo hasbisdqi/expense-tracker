@@ -121,6 +121,12 @@ class ExpenseDatabase extends Dexie {
       accounts: "id, &name, updatedAt",
       sync_queue: "id, action, table, recordId, createdAt",
     });
+
+    // Version 5: remove unique constraint on name for categories and accounts to prevent sync collisions
+    this.version(5).stores({
+      categories: "id, name, updatedAt",
+      accounts: "id, name, updatedAt",
+    });
   }
 }
 

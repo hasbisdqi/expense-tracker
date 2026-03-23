@@ -20,13 +20,13 @@ export const SUPPORTED_CURRENCIES: Currency[] = [
   { code: "CAD", symbol: "$", name: "Canadian Dollar", locale: "en-CA" },
 ];
 
-export const DEFAULT_CURRENCY_CODE = "INR";
+export const DEFAULT_CURRENCY_CODE = "IDR";
 
 export function getCurrencyByCode(code: string): Currency {
   return SUPPORTED_CURRENCIES.find((c) => c.code === code) || SUPPORTED_CURRENCIES[0];
 }
 
-export function formatNumber(value: number, locale = "en-IN") {
+export function formatNumber(value: number, locale = "id-ID") {
   try {
     return value.toLocaleString(locale);
   } catch {

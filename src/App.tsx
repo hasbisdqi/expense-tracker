@@ -36,11 +36,21 @@ function AppContent() {
 
   useEffect(() => {
     if (user) {
-      initializeDatabase().then(async () => {
-        await linkDataToUser(user.id);
-        await startDownstreamSync();
-        await processSyncQueue();
-      });
+      const init = async () => {
+        try {
+          // 1. Pull data from remote first
+          await startDownstreamSync();
+          // 2. Initialize default categories/accounts ONLY if nothing was downloaded
+          await initializeDatabase();
+          // 3. Link records to user
+          await linkDataToUser(user.id);
+          // 4. Push any pending changes
+          await processSyncQueue();
+        } catch (e) {
+          console.error("Initialization error", e);
+        }
+      };
+      init();
     }
   }, [user]);
 
