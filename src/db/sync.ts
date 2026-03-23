@@ -209,10 +209,26 @@ export async function startDownstreamSync() {
       // Basic approach: pull everything for local cache. 
       // A more robust approach would track last_sync_time.
       const { data, error } = await supabase.from(table).select("*").eq("user_id", session.user.id);
-      // Map remote rows back to local Dexie schema
-      if (!error && data && data.length > 0) {
-        const localData = data.map(row => fromSupabase(table, row));
-        await db.table(table).bulkPut(localData);
+      
+      if (!error && data) {
+        // Map over what we received
+        const localData = data.map(row => fromSupabase(table, row)).filter(Boolean);
+        const remoteIds = new Set(data.map(r => r.id));
+
+        // Get everything we currently have locally
+        const localIds = await db.table(table).toCollection().primaryKeys();
+
+        // Any local ID that's NOT in the remote IDs was likely deleted from another device.
+        const idsToDelete = localIds.filter(id => !remoteIds.has(id));
+
+        // Perform pruning and applying
+        if (idsToDelete.length > 0) {
+          await db.table(table).bulkDelete(idsToDelete as any);
+        }
+        
+        if (localData.length > 0) {
+          await db.table(table).bulkPut(localData);
+        }
       }
     }
   } catch (e) {

@@ -38,14 +38,14 @@ function AppContent() {
     if (user) {
       const init = async () => {
         try {
-          // 1. Pull data from remote first
-          await startDownstreamSync();
-          // 2. Initialize default categories/accounts ONLY if nothing was downloaded
-          await initializeDatabase();
-          // 3. Link records to user
-          await linkDataToUser(user.id);
-          // 4. Push any pending changes
+          // 1. Push any pending changes to cloud first, so the cloud has our latest offline actions.
           await processSyncQueue();
+          // 2. Pull down the authoritative remote state and mirror exactly.
+          await startDownstreamSync();
+          // 3. Initialize default categories/accounts ONLY if nothing was downloaded
+          await initializeDatabase();
+          // 4. Link records to user
+          await linkDataToUser(user.id);
         } catch (e) {
           console.error("Initialization error", e);
         }
