@@ -8,63 +8,7 @@ const SYNCABLE_TABLES = ["expenses", "categories", "accounts"];
 
 import Dexie from "dexie";
 
-// Capture local Dexie changes via hooks
-let pendingChanges: SyncQueueItem[] = [];
-
-function createSyncItem(
-  action: "insert" | "update" | "delete",
-  table: string,
-  recordId: string,
-  data?: any
-): SyncQueueItem {
-  return {
-    id: uuidv4(),
-    action,
-    table,
-    recordId,
-    data,
-    createdAt: new Date().toISOString(),
-  };
-}
-
-function flushPendingChanges() {
-  if (pendingChanges.length === 0) return;
-  const items = [...pendingChanges];
-  pendingChanges = [];
-  
-  db.sync_queue.bulkAdd(items)
-    .then(() => processSyncQueue())
-    .catch((e) => console.error("Could not write to sync_queue", e));
-}
-
-SYNCABLE_TABLES.forEach((tableName) => {
-  const table = db.table(tableName);
-
-  table.hook("creating", function (primKey, obj, trans) {
-    if ((window as any).__applyingDownstreamSync) return;
-    pendingChanges.push(createSyncItem("insert", tableName, primKey as string, obj));
-    trans.on("complete", flushPendingChanges);
-  });
-
-  table.hook("updating", function (mods, primKey, obj, trans) {
-    if ((window as any).__applyingDownstreamSync) return;
-    const newData = { ...obj };
-    for (const key in mods) {
-      if ((mods as any)[key] === undefined) delete (newData as any)[key];
-      else (newData as any)[key] = (mods as any)[key];
-    }
-    pendingChanges.push(createSyncItem("update", tableName, primKey as string, newData));
-    trans.on("complete", flushPendingChanges);
-  });
-
-  table.hook("deleting", function (primKey, obj, trans) {
-    if ((window as any).__applyingDownstreamSync) return;
-    pendingChanges.push(createSyncItem("delete", tableName, primKey as string));
-    trans.on("complete", flushPendingChanges);
-  });
-});
-
-function toSupabase(table: string, obj: any, userId: string) {
+export function toSupabase(table: string, obj: any, userId: string) {
   if (!obj) return null;
   if (table === "accounts" || table === "categories") {
     return {
@@ -99,7 +43,7 @@ function toSupabase(table: string, obj: any, userId: string) {
   return obj;
 }
 
-function fromSupabase(table: string, obj: any) {
+export function fromSupabase(table: string, obj: any) {
   if (!obj) return null;
   if (table === "accounts" || table === "categories") {
     return {

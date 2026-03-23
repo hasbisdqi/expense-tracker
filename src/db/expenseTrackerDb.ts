@@ -1,6 +1,8 @@
 import Dexie, { Table } from "dexie";
 import { Expense, Category, TagMetadata, Account, SyncQueueItem } from "@/types/expense";
 import { v4 as uuidv4 } from "uuid";
+import { supabase } from "@/lib/supabase";
+import { toSupabase, processSyncQueue } from "./sync";
 
 // Category colors palette
 export const CATEGORY_COLORS = [
@@ -181,6 +183,47 @@ export async function linkDataToUser(userId: string): Promise<void> {
   });
 }
 
+async function executeOnlineFirst(
+  action: "insert" | "update" | "delete",
+  table: string,
+  recordId: string,
+  localData: any = null
+) {
+  let isOffline = !navigator.onLine;
+
+  try {
+    if (!isOffline) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        if (action === "delete") {
+           const { error } = await supabase.from(table).delete().eq("id", recordId);
+           if (error) throw error;
+        } else {
+           const mappedData = toSupabase(table, localData, session.user.id);
+           if (!mappedData) throw new Error("Mapping failed");
+           const { error } = await supabase.from(table).upsert(mappedData);
+           if (error) throw error;
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Online push failed, falling back to local queue", e);
+    isOffline = true;
+  }
+
+  if (isOffline) {
+     await db.sync_queue.add({
+       id: uuidv4(),
+       action,
+       table,
+       recordId,
+       data: localData,
+       createdAt: new Date().toISOString()
+     });
+     setTimeout(processSyncQueue, 100);
+  }
+}
+
 // Expense CRUD operations
 export async function addExpense(
   expense: Omit<Expense, "id" | "createdAt" | "updatedAt">,
@@ -195,6 +238,7 @@ export async function addExpense(
     updatedAt: now,
   };
 
+  await executeOnlineFirst("insert", "expenses", id, newExpense);
   await db.expenses.add(newExpense);
 
   // Update tag metadata
@@ -210,6 +254,11 @@ export async function updateExpense(
   updates: Partial<Omit<Expense, "id" | "createdAt">>,
 ): Promise<void> {
   const now = new Date().toISOString();
+  const existing = await db.expenses.get(id);
+  if (!existing) throw new Error("Expense not found");
+
+  const updatedExpense = { ...existing, ...updates, updatedAt: now };
+  await executeOnlineFirst("update", "expenses", id, updatedExpense);
   await db.expenses.update(id, { ...updates, updatedAt: now });
 
   // Update tag metadata for new tags
@@ -221,6 +270,7 @@ export async function updateExpense(
 }
 
 export async function deleteExpense(id: string): Promise<void> {
+  await executeOnlineFirst("delete", "expenses", id);
   await db.expenses.delete(id);
 }
 
@@ -242,12 +292,10 @@ export async function getExpensesByCategory(categoryId: string): Promise<Expense
 export async function addCategory(category: Omit<Category, "id" | "createdAt">): Promise<string> {
   const id = uuidv4();
   const now = new Date().toISOString();
+  const newCategory = { ...category, id, createdAt: now };
 
-  await db.categories.add({
-    ...category,
-    id,
-    createdAt: now,
-  });
+  await executeOnlineFirst("insert", "categories", id, newCategory);
+  await db.categories.add(newCategory);
 
   return id;
 }
@@ -256,6 +304,11 @@ export async function updateCategory(
   id: string,
   updates: Partial<Omit<Category, "id" | "createdAt">>,
 ): Promise<void> {
+  const existing = await db.categories.get(id);
+  if (!existing) throw new Error("Category not found");
+
+  const updatedCategory = { ...existing, ...updates };
+  await executeOnlineFirst("update", "categories", id, updatedCategory);
   await db.categories.update(id, updates);
 }
 
@@ -270,13 +323,20 @@ export async function deleteCategory(id: string, moveToCategory?: string): Promi
     // Move all expenses to the target category
     const expenses = await db.expenses.where("category").equals(id).toArray();
     for (const expense of expenses) {
+      const updatedExpense = { ...expense, category: moveToCategory, updatedAt: new Date().toISOString() };
+      await executeOnlineFirst("update", "expenses", expense.id, updatedExpense);
       await db.expenses.update(expense.id, { category: moveToCategory });
     }
   } else {
     // Delete all expenses in this category
-    await db.expenses.where("category").equals(id).delete();
+    const expenses = await db.expenses.where("category").equals(id).toArray();
+    for (const expense of expenses) {
+      await executeOnlineFirst("delete", "expenses", expense.id);
+      await db.expenses.delete(expense.id);
+    }
   }
 
+  await executeOnlineFirst("delete", "categories", id);
   await db.categories.delete(id);
 }
 
@@ -296,12 +356,10 @@ export async function getCategoryByName(name: string): Promise<Category | undefi
 export async function addAccount(account: Omit<Account, "id" | "createdAt">): Promise<string> {
   const id = uuidv4();
   const now = new Date().toISOString();
+  const newAccount = { ...account, id, createdAt: now };
 
-  await db.accounts.add({
-    ...account,
-    id,
-    createdAt: now,
-  });
+  await executeOnlineFirst("insert", "accounts", id, newAccount);
+  await db.accounts.add(newAccount);
 
   return id;
 }
@@ -310,6 +368,11 @@ export async function updateAccount(
   id: string,
   updates: Partial<Omit<Account, "id" | "createdAt">>,
 ): Promise<void> {
+  const existing = await db.accounts.get(id);
+  if (!existing) throw new Error("Account not found");
+
+  const updatedAccount = { ...existing, ...updates };
+  await executeOnlineFirst("update", "accounts", id, updatedAccount);
   await db.accounts.update(id, updates);
 }
 
@@ -323,21 +386,31 @@ export async function deleteAccount(id: string, moveToAccountId?: string): Promi
     // Move all expenses to the target account
     const expenses = await db.expenses.where("accountId").equals(id).toArray();
     for (const exp of expenses) {
+      const updatedExpense = { ...exp, accountId: moveToAccountId, updatedAt: new Date().toISOString() };
+      await executeOnlineFirst("update", "expenses", exp.id, updatedExpense);
       await db.expenses.update(exp.id, { accountId: moveToAccountId });
     }
     const transfersTo = await db.expenses.filter(e => e.type === "transfer" && e.toAccountId === id).toArray();
     for (const transfer of transfersTo) {
+      const updatedTransfer = { ...transfer, toAccountId: moveToAccountId, updatedAt: new Date().toISOString() };
+      await executeOnlineFirst("update", "expenses", transfer.id, updatedTransfer);
       await db.expenses.update(transfer.id, { toAccountId: moveToAccountId });
     }
   } else {
     // Delete all transactions linked to this account
-    await db.expenses.where("accountId").equals(id).delete();
+    const expenses = await db.expenses.where("accountId").equals(id).toArray();
+    for (const exp of expenses) {
+      await executeOnlineFirst("delete", "expenses", exp.id);
+      await db.expenses.delete(exp.id);
+    }
     const transfersTo = await db.expenses.filter(e => e.type === "transfer" && e.toAccountId === id).toArray();
     for (const transfer of transfersTo) {
+      await executeOnlineFirst("delete", "expenses", transfer.id);
       await db.expenses.delete(transfer.id);
     }
   }
 
+  await executeOnlineFirst("delete", "accounts", id);
   await db.accounts.delete(id);
 }
 
