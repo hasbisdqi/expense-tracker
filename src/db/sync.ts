@@ -27,20 +27,14 @@ function createSyncItem(
   };
 }
 
-let flushTimeout: any = null;
 function flushPendingChanges() {
-  if (flushTimeout) clearTimeout(flushTimeout);
-  flushTimeout = setTimeout(async () => {
-    if (pendingChanges.length === 0) return;
-    const items = [...pendingChanges];
-    pendingChanges = [];
-    try {
-      await db.sync_queue.bulkAdd(items);
-      processSyncQueue();
-    } catch (e) {
-      console.error("Could not write to sync_queue", e);
-    }
-  }, 50);
+  if (pendingChanges.length === 0) return;
+  const items = [...pendingChanges];
+  pendingChanges = [];
+  
+  db.sync_queue.bulkAdd(items)
+    .then(() => processSyncQueue())
+    .catch((e) => console.error("Could not write to sync_queue", e));
 }
 
 SYNCABLE_TABLES.forEach((tableName) => {
@@ -219,7 +213,24 @@ export async function startDownstreamSync() {
         const localIds = await db.table(table).toCollection().primaryKeys();
 
         // Any local ID that's NOT in the remote IDs was likely deleted from another device.
-        const idsToDelete = localIds.filter(id => !remoteIds.has(id));
+        let idsToDelete = localIds.filter(id => !remoteIds.has(id));
+
+        // CRITICAL PROTECTION: Do NOT delete local IDs that are currently pending in sync_queue!
+        // These are items that failed to upload or haven't uploaded yet.
+        const pendingQueue = await db.sync_queue.where("table").equals(table).toArray();
+        const pendingIds = new Set(pendingQueue.map(q => q.recordId));
+        
+        idsToDelete = idsToDelete.filter(id => !pendingIds.has(id as string));
+
+        // Also protect recently created items (last 10 seconds) just in case the sync_queue
+        // hook hasn't committed yet during a rapid refresh scenario.
+        const tenSecondsAgo = new Date(Date.now() - 10000).toISOString();
+        const recentlyCreatedItems = await db.table(table)
+          .filter(item => (item.createdAt > tenSecondsAgo) || (item.updatedAt > tenSecondsAgo))
+          .toArray();
+        const recentIds = new Set(recentlyCreatedItems.map(item => item.id));
+
+        idsToDelete = idsToDelete.filter(id => !recentIds.has(id as string));
 
         // Perform pruning and applying
         if (idsToDelete.length > 0) {
