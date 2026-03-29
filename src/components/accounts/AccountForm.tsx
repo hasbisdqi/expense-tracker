@@ -11,6 +11,7 @@ import { ColorPicker } from "@/components/categories/ColorPicker";
 import { CATEGORY_COLORS } from "@/db/expenseTrackerDb";
 import { toast } from "sonner";
 import { Account } from "@/types/expense";
+import { useHotkeys } from "@/hooks/use-hotkeys";
 
 const accountSchema = z.object({
   name: z.string().min(1, "Name required").max(30, "Max 30 characters"),
@@ -73,6 +74,12 @@ export function AccountForm({ account, onSuccess, onCancel }: AccountFormProps) 
       toast.error("Failed to save account");
     }
   };
+
+  // ⌘ + Enter or Ctrl + Enter to submit
+  useHotkeys("enter", () => handleSubmit(onSubmit)(), {
+    meta: true,
+    enableOnInputs: true,
+  });
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

@@ -18,9 +18,9 @@ const sidebarNavItems = [
   { path: "/", icon: Home, label: "Home" },
   { path: "/accounts", icon: Wallet, label: "Accounts" },
   { path: "/categories", icon: LayoutGrid, label: "Categories" },
-  { path: "/analysis", icon: BarChart3, label: "Analysis" },
-  { path: "/transactions", icon: List, label: "Transactions" },
-  { path: "/settings", icon: Settings, label: "Settings" },
+  { path: "/analysis", icon: BarChart3, label: "Analysis", key: "A" },
+  { path: "/transactions", icon: List, label: "Transactions", key: "T" },
+  { path: "/settings", icon: Settings, label: "Settings", key: "S" },
 ];
 
 export function BottomNav() {
@@ -139,6 +139,9 @@ export function SidebarNav() {
       >
         <Plus className="h-5 w-5" />
         Add Transaction
+        <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-primary-foreground/20 border border-primary-foreground/20">
+           N
+        </span>
       </button>
 
       <nav className="flex flex-col gap-1">
@@ -162,6 +165,9 @@ export function SidebarNav() {
             >
               <Icon className="h-5 w-5" />
               <span>{item.label}</span>
+              <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-background/50 border border-border/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                 {item.path === "/" ? "H" : item.label.charAt(0)}
+              </span>
             </RouterNavLink>
           );
         })}

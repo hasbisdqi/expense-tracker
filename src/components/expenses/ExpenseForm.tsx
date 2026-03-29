@@ -38,6 +38,7 @@ import imageCompression from "browser-image-compression";
 import { toast } from "sonner";
 import { useCurrency } from "@/contexts/CurrencyContext";
 import CurrencyInput from "../ui/currency-input";
+import { useHotkeys } from "@/hooks/use-hotkeys";
 
 const expenseSchema = z.object({
   type: z.enum(["expense", "income", "transfer"]),
@@ -255,6 +256,12 @@ export function ExpenseForm({ expense, duplicate, onSuccess, onCancel }: Expense
     setShowAccountDialog(false);
   };
 
+  // ⌘ + Enter or Ctrl + Enter to submit
+  useHotkeys("enter", () => handleSubmit(onSubmit as any)(), {
+    meta: true,
+    enableOnInputs: true,
+  });
+
   return (
     <>
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-6">
@@ -381,6 +388,7 @@ export function ExpenseForm({ expense, duplicate, onSuccess, onCancel }: Expense
           currency={currency}
           value={watch("value")}
           error={errors.value?.message}
+          autoFocus={!expense && !duplicate}
         />
 
         {/* Category Select */}

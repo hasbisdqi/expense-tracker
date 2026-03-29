@@ -19,6 +19,7 @@ import { CATEGORY_COLORS } from "@/db/expenseTrackerDb";
 import { toast } from "sonner";
 import CurrencyInput from "../ui/currency-input";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import { useHotkeys } from "@/hooks/use-hotkeys";
 
 const categorySchema = z.object({
   name: z.string().min(1, "Name required").max(30, "Max 30 characters"),
@@ -101,6 +102,12 @@ export function CategoryForm({ category, onSuccess, onCancel }: CategoryFormProp
       toast.error("Failed to save category");
     }
   };
+
+  // ⌘ + Enter or Ctrl + Enter to submit
+  useHotkeys("enter", () => handleSubmit(onSubmit)(), {
+    meta: true,
+    enableOnInputs: true,
+  });
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
