@@ -37,6 +37,7 @@ export interface Category {
   color: string; // Hex color code
   isDefault?: boolean; // Cannot delete default categories
   budget?: number;
+  budgetPeriod?: "daily" | "weekly" | "monthly" | "yearly";
   createdAt: string;
 }
 
@@ -81,6 +82,7 @@ export interface CategoryFormData {
   icon: string;
   color: string;
   budget?: number | null;
+  budgetPeriod?: "daily" | "weekly" | "monthly" | "yearly" | null;
 }
 
 // Filter types

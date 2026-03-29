@@ -19,6 +19,7 @@ export function toSupabase(table: string, obj: any, userId: string) {
       color: obj.color,
       is_default: obj.isDefault || false,
       budget: obj.budget || null,
+      budget_period: obj.budgetPeriod || null,
       created_at: obj.createdAt,
       updated_at: obj.updatedAt || new Date().toISOString()
     };
@@ -55,6 +56,7 @@ export function fromSupabase(table: string, obj: any) {
       color: obj.color,
       isDefault: obj.is_default,
       budget: obj.budget || undefined,
+      budgetPeriod: obj.budget_period || undefined,
       createdAt: obj.created_at,
       updatedAt: obj.updated_at || obj.created_at
     };

@@ -9,6 +9,8 @@ import {
 } from "@/types/expense";
 import { useMemo } from "react";
 import {
+  startOfDay,
+  endOfDay,
   startOfWeek,
   endOfWeek,
   startOfMonth,
@@ -277,6 +279,7 @@ export interface CategoryBudgetSummary {
   percentageUsed: number;
   isWarning: boolean;
   isOverBudget: boolean;
+  period: "daily" | "weekly" | "monthly" | "yearly";
 }
 
 export function useCategoryBudgets(accountId?: string): Record<string, CategoryBudgetSummary> {
@@ -285,8 +288,19 @@ export function useCategoryBudgets(accountId?: string): Record<string, CategoryB
 
   return useMemo(() => {
     const now = new Date();
-    const monthStart = startOfMonth(now);
-    const monthEnd = endOfMonth(now);
+    
+    const bounds: Record<string, {start: Date, end: Date}> = {
+      daily: { start: startOfDay(now), end: endOfDay(now) },
+      weekly: { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) },
+      monthly: { start: startOfMonth(now), end: endOfMonth(now) },
+      yearly: { start: startOfYear(now), end: endOfYear(now) },
+    };
+
+    const catBounds: Record<string, {start: Date, end: Date}> = {};
+    for (const category of categories) {
+       const period = category.budgetPeriod || "monthly";
+       catBounds[category.id] = bounds[period];
+    }
     
     // Group expenses by category
     const categorySpent: Record<string, number> = {};
@@ -300,8 +314,11 @@ export function useCategoryBudgets(accountId?: string): Record<string, CategoryB
         continue;
       }
       
+      const boundsForCat = catBounds[expense.category];
+      if (!boundsForCat) continue;
+      
       const expenseDate = parseISO(expense.date);
-      if (isWithinInterval(expenseDate, { start: monthStart, end: monthEnd })) {
+      if (isWithinInterval(expenseDate, { start: boundsForCat.start, end: boundsForCat.end })) {
         categorySpent[expense.category] = (categorySpent[expense.category] || 0) + expense.value;
       }
     }
@@ -323,6 +340,7 @@ export function useCategoryBudgets(accountId?: string): Record<string, CategoryB
           percentageUsed,
           isWarning: remaining > 0 && remaining < category.budget * 0.2,
           isOverBudget: remaining < 0,
+          period: category.budgetPeriod || "monthly",
         };
       }
     }

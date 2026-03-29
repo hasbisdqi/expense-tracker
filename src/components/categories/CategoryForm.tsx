@@ -4,6 +4,13 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CategoryFormData } from "@/types/expense";
 import { addCategory, updateCategory, getCategoryByName } from "@/db/expenseTrackerDb";
 import { IconPicker } from "@/components/categories/CategoryIcon";
@@ -19,10 +26,11 @@ const categorySchema = z.object({
     if (val === "" || val === null || val === undefined) return null;
     return Number(val);
   }, z.number().min(0, "Must be positive").nullable().optional()),
+  budgetPeriod: z.enum(["daily", "weekly", "monthly", "yearly"]).nullable().optional(),
 });
 
 interface CategoryFormProps {
-  category?: { id: string; name: string; icon: string; color: string; budget?: number };
+  category?: { id: string; name: string; icon: string; color: string; budget?: number; budgetPeriod?: "daily" | "weekly" | "monthly" | "yearly" };
   onSuccess?: (id: string) => void;
   onCancel?: () => void;
 }
@@ -34,12 +42,14 @@ export function CategoryForm({ category, onSuccess, onCancel }: CategoryFormProp
         icon: category.icon,
         color: category.color,
         budget: category.budget || null,
+        budgetPeriod: category.budgetPeriod || "monthly",
       }
     : {
         name: "",
         icon: "Tag",
         color: CATEGORY_COLORS[Math.floor(Math.random() * CATEGORY_COLORS.length)],
         budget: null,
+        budgetPeriod: "monthly",
       };
 
   const {
@@ -71,6 +81,7 @@ export function CategoryForm({ category, onSuccess, onCancel }: CategoryFormProp
       const cleanData: CategoryFormData = {
         ...data,
         budget: data.budget || null,
+        budgetPeriod: data.budgetPeriod || "monthly",
       };
 
       let id: string;
@@ -97,18 +108,37 @@ export function CategoryForm({ category, onSuccess, onCancel }: CategoryFormProp
         {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
       </div>
 
-      {/* Monthly Budget */}
-      <div className="space-y-2">
-        <Label htmlFor="budget">Monthly Budget (Optional)</Label>
-        <Input 
-          id="budget" 
-          type="number" 
-          step="0.01" 
-          placeholder="e.g. 500" 
-          {...register("budget", { valueAsNumber: true })} 
-        />
-        {errors.budget && <p className="text-sm text-destructive">{errors.budget.message}</p>}
-        <p className="text-xs text-muted-foreground">Leave empty for no budget limit</p>
+      {/* Budget */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="budget">Budget Limit (Optional)</Label>
+          <Input 
+            id="budget" 
+            type="number" 
+            step="0.01" 
+            placeholder="e.g. 500" 
+            {...register("budget", { valueAsNumber: true })} 
+          />
+          {errors.budget && <p className="text-sm text-destructive">{errors.budget.message}</p>}
+        </div>
+
+        <div className="space-y-2">
+          <Label>Budget Period</Label>
+          <Select 
+            value={watch("budgetPeriod") || "monthly"} 
+            onValueChange={(val: any) => setValue("budgetPeriod", val)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="daily">Daily</SelectItem>
+              <SelectItem value="weekly">Weekly</SelectItem>
+              <SelectItem value="monthly">Monthly</SelectItem>
+              <SelectItem value="yearly">Yearly</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Icon Picker */}
