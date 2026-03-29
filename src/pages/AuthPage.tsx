@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Wallet } from "lucide-react";
+import { Logo } from "@/components/ui/Logo";
 
 export default function AuthPage() {
   const [email, setEmail] = useState("");
@@ -37,8 +38,8 @@ export default function AuthPage() {
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
       <div className="w-full max-w-sm space-y-6">
         <div className="flex flex-col items-center text-center space-y-2">
-          <div className="h-12 w-12 bg-primary rounded-xl flex items-center justify-center mb-4">
-             <Wallet className="h-6 w-6 text-primary-foreground" />
+          <div className="h-14 w-14 bg-foreground/10 rounded-lg flex items-center justify-center mb-4">
+            <Logo size={40} variant="icon" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">Mamoni</h1>
           <p className="text-sm text-muted-foreground">Sign in to securely sync your data across devices.</p>

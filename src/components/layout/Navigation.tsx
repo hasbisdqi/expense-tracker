@@ -4,6 +4,7 @@ import { Home, FolderOpen, BarChart3, Settings, Plus, Wallet, LayoutGrid, List, 
 import { cn } from "@/lib/utils";
 import { LazyMotion, domAnimation, m } from "framer-motion";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Logo } from "@/components/ui/Logo";
 
 const navItemsLeft = [
   { path: "/", icon: Home, label: "Home" },
@@ -127,9 +128,8 @@ export function SidebarNav() {
 
   return (
     <aside className="hidden lg:flex flex-col w-64 border-r border-border bg-card/50 p-4">
-      <div className="mb-8">
-        <h1 className="text-xl font-bold gradient-text">Mamoni</h1>
-        <p className="text-xs text-muted-foreground mt-1">Track your spending</p>
+      <div className="mb-8 px-2">
+        <Logo size={24} />
       </div>
 
       {/* Add Transaction Button */}
@@ -140,7 +140,7 @@ export function SidebarNav() {
         <Plus className="h-5 w-5" />
         Add Transaction
         <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-primary-foreground/20 border border-primary-foreground/20">
-           N
+          N
         </span>
       </button>
 
@@ -166,7 +166,7 @@ export function SidebarNav() {
               <Icon className="h-5 w-5" />
               <span>{item.label}</span>
               <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-background/50 border border-border/50 opacity-0 group-hover:opacity-100 transition-opacity">
-                 {item.path === "/" ? "H" : item.label.charAt(0)}
+                {item.path === "/" ? "H" : item.label.charAt(0)}
               </span>
             </RouterNavLink>
           );

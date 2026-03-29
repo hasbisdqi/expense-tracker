@@ -22,6 +22,7 @@ import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import AuthPage from "@/pages/AuthPage";
 import { Loader2 } from "lucide-react";
+import Loading from "./components/ui/loading";
 
 const AddExpensePage = lazy(() => import("@/pages/AddExpensePage"));
 const AccountsPage = lazy(() => import("@/pages/AccountsPage"));
@@ -57,7 +58,7 @@ function AppContent() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loading />
       </div>
     );
   }
@@ -101,14 +102,14 @@ const App = () => (
     <AuthProvider>
       <CurrencyProvider>
         <ThemeProvider>
-        <TooltipProvider>
-          <Sonner position="top-right" duration={3000} />
-          <BrowserRouter>
-            <RootRoutes />
-          </BrowserRouter>
-          <ReloadPrompt />
-        </TooltipProvider>
-      </ThemeProvider>
+          <TooltipProvider>
+            <Sonner position="top-right" duration={3000} />
+            <BrowserRouter>
+              <RootRoutes />
+            </BrowserRouter>
+            <ReloadPrompt />
+          </TooltipProvider>
+        </ThemeProvider>
       </CurrencyProvider>
     </AuthProvider>
   </QueryClientProvider>
