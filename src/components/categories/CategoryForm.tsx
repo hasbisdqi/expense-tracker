@@ -17,6 +17,8 @@ import { IconPicker } from "@/components/categories/CategoryIcon";
 import { ColorPicker } from "@/components/categories/ColorPicker";
 import { CATEGORY_COLORS } from "@/db/expenseTrackerDb";
 import { toast } from "sonner";
+import CurrencyInput from "../ui/currency-input";
+import { useCurrency } from "@/contexts/CurrencyContext";
 
 const categorySchema = z.object({
   name: z.string().min(1, "Name required").max(30, "Max 30 characters"),
@@ -38,19 +40,19 @@ interface CategoryFormProps {
 export function CategoryForm({ category, onSuccess, onCancel }: CategoryFormProps) {
   const defaultValues: CategoryFormData = category
     ? {
-        name: category.name,
-        icon: category.icon,
-        color: category.color,
-        budget: category.budget || null,
-        budgetPeriod: category.budgetPeriod || "monthly",
-      }
+      name: category.name,
+      icon: category.icon,
+      color: category.color,
+      budget: category.budget || null,
+      budgetPeriod: category.budgetPeriod || "monthly",
+    }
     : {
-        name: "",
-        icon: "Tag",
-        color: CATEGORY_COLORS[Math.floor(Math.random() * CATEGORY_COLORS.length)],
-        budget: null,
-        budgetPeriod: "monthly",
-      };
+      name: "",
+      icon: "Tag",
+      color: CATEGORY_COLORS[Math.floor(Math.random() * CATEGORY_COLORS.length)],
+      budget: null,
+      budgetPeriod: "monthly",
+    };
 
   const {
     register,
@@ -65,6 +67,7 @@ export function CategoryForm({ category, onSuccess, onCancel }: CategoryFormProp
 
   const selectedIcon = watch("icon");
   const selectedColor = watch("color");
+  const { currency } = useCurrency();
 
   const onSubmit = async (data: CategoryFormData) => {
     try {
@@ -110,22 +113,19 @@ export function CategoryForm({ category, onSuccess, onCancel }: CategoryFormProp
 
       {/* Budget */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="budget">Budget Limit (Optional)</Label>
-          <Input 
-            id="budget" 
-            type="number" 
-            step="0.01" 
-            placeholder="e.g. 500" 
-            {...register("budget", { valueAsNumber: true })} 
-          />
-          {errors.budget && <p className="text-sm text-destructive">{errors.budget.message}</p>}
-        </div>
+        <CurrencyInput
+          label="Budget Limit (Optional)"
+          name="budget"
+          setValue={setValue}
+          currency={currency}
+          value={watch("budget")}
+          error={errors.budget?.message}
+        />
 
         <div className="space-y-2">
           <Label>Budget Period</Label>
-          <Select 
-            value={watch("budgetPeriod") || "monthly"} 
+          <Select
+            value={watch("budgetPeriod") || "monthly"}
             onValueChange={(val: any) => setValue("budgetPeriod", val)}
           >
             <SelectTrigger>

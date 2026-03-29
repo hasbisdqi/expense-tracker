@@ -37,6 +37,7 @@ import { CategoryForm } from "@/components/categories/CategoryForm";
 import imageCompression from "browser-image-compression";
 import { toast } from "sonner";
 import { useCurrency } from "@/contexts/CurrencyContext";
+import CurrencyInput from "../ui/currency-input";
 
 const expenseSchema = z.object({
   type: z.enum(["expense", "income", "transfer"]),
@@ -64,7 +65,7 @@ const expenseSchema = z.object({
 ).refine(
   (data) => {
     if (data.type !== "transfer" && (!data.category || data.category.length === 0)) {
-       return false;
+      return false;
     }
     return true;
   },
@@ -373,27 +374,14 @@ export function ExpenseForm({ expense, duplicate, onSuccess, onCancel }: Expense
           )}
         </div>
 
-        {/* Value Input */}
-        <div className="space-y-2">
-          <Label htmlFor="value">Amount</Label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
-              {currency.symbol}
-            </span>
-            <Input
-              id="value"
-              type="number"
-              step="0.01"
-              min="0"
-              max="10000000"
-              className="pl-8 text-lg font-semibold"
-              placeholder="0"
-              autoFocus
-              {...register("value", { valueAsNumber: true })}
-            />
-          </div>
-          {errors.value && <p className="text-sm text-destructive">{errors.value.message}</p>}
-        </div>
+        <CurrencyInput
+          label="Amount"
+          name="value"
+          setValue={setValue}
+          currency={currency}
+          value={watch("value")}
+          error={errors.value?.message}
+        />
 
         {/* Category Select */}
         {currentType !== "transfer" && (
