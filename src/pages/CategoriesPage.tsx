@@ -132,16 +132,16 @@ export default function CategoriesPage() {
 
                       {categoryBudgets[category.id] && (
                         <div className="mt-2 space-y-1">
-                          <div className="flex justify-between text-xs font-medium">
+                          <div className="flex flex-col justify-between text-xs font-medium">
                             <span className={cn(
                               categoryBudgets[category.id].isOverBudget ? "text-destructive" :
                                 categoryBudgets[category.id].isWarning ? "text-orange-500" : "text-muted-foreground"
                             )}>
                               {currency.symbol}{formatValue(categoryBudgets[category.id].spent)} / {currency.symbol}{formatValue(categoryBudgets[category.id].totalBudget)} ({categoryBudgets[category.id].period.charAt(0).toUpperCase() + categoryBudgets[category.id].period.slice(1)})
                             </span>
-                            <span className="text-muted-foreground ml-2">
+                            <span className="text-muted-foreground">
                               {categoryBudgets[category.id].isOverBudget
-                                ? `Over by $${Math.abs(categoryBudgets[category.id].remaining).toLocaleString()}`
+                                ? `Over by ${currency.symbol}${formatValue(Math.abs(categoryBudgets[category.id].remaining))}`
                                 : `${Math.min(100, categoryBudgets[category.id].percentageUsed).toFixed(0)}%`}
                             </span>
                           </div>
