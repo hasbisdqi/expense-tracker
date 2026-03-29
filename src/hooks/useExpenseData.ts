@@ -267,3 +267,66 @@ export function getDateRangeForPeriod(
       return customRange || { start: startOfMonth(date), end: endOfMonth(date) };
   }
 }
+
+export interface CategoryBudgetSummary {
+  categoryId: string;
+  categoryName: string;
+  totalBudget: number;
+  spent: number;
+  remaining: number;
+  percentageUsed: number;
+  isWarning: boolean;
+  isOverBudget: boolean;
+}
+
+export function useCategoryBudgets(accountId?: string): Record<string, CategoryBudgetSummary> {
+  const categories = useCategories();
+  const expenses = useExpenses();
+
+  return useMemo(() => {
+    const now = new Date();
+    const monthStart = startOfMonth(now);
+    const monthEnd = endOfMonth(now);
+    
+    // Group expenses by category
+    const categorySpent: Record<string, number> = {};
+    
+    for (const expense of expenses) {
+      if (accountId && expense.accountId !== accountId && expense.toAccountId !== accountId) {
+        continue;
+      }
+
+      if (expense.type && expense.type !== "expense") {
+        continue;
+      }
+      
+      const expenseDate = parseISO(expense.date);
+      if (isWithinInterval(expenseDate, { start: monthStart, end: monthEnd })) {
+        categorySpent[expense.category] = (categorySpent[expense.category] || 0) + expense.value;
+      }
+    }
+
+    const result: Record<string, CategoryBudgetSummary> = {};
+    
+    for (const category of categories) {
+      if (category.budget && category.budget > 0) {
+        const spent = categorySpent[category.id] || 0;
+        const remaining = category.budget - spent;
+        const percentageUsed = (spent / category.budget) * 100;
+        
+        result[category.id] = {
+          categoryId: category.id,
+          categoryName: category.name,
+          totalBudget: category.budget,
+          spent,
+          remaining,
+          percentageUsed,
+          isWarning: remaining > 0 && remaining < category.budget * 0.2,
+          isOverBudget: remaining < 0,
+        };
+      }
+    }
+
+    return result;
+  }, [categories, expenses, accountId]);
+}

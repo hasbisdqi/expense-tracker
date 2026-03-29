@@ -36,6 +36,7 @@ export interface Category {
   icon: string; // Lucide icon name
   color: string; // Hex color code
   isDefault?: boolean; // Cannot delete default categories
+  budget?: number;
   createdAt: string;
 }
 
@@ -79,6 +80,7 @@ export interface CategoryFormData {
   name: string;
   icon: string;
   color: string;
+  budget?: number | null;
 }
 
 // Filter types

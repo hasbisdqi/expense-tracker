@@ -15,10 +15,14 @@ const categorySchema = z.object({
   name: z.string().min(1, "Name required").max(30, "Max 30 characters"),
   icon: z.string().min(1, "Icon required"),
   color: z.string().min(1, "Color required"),
+  budget: z.preprocess((val) => {
+    if (val === "" || val === null || val === undefined) return null;
+    return Number(val);
+  }, z.number().min(0, "Must be positive").nullable().optional()),
 });
 
 interface CategoryFormProps {
-  category?: { id: string; name: string; icon: string; color: string };
+  category?: { id: string; name: string; icon: string; color: string; budget?: number };
   onSuccess?: (id: string) => void;
   onCancel?: () => void;
 }
@@ -29,11 +33,13 @@ export function CategoryForm({ category, onSuccess, onCancel }: CategoryFormProp
         name: category.name,
         icon: category.icon,
         color: category.color,
+        budget: category.budget || null,
       }
     : {
         name: "",
         icon: "Tag",
         color: CATEGORY_COLORS[Math.floor(Math.random() * CATEGORY_COLORS.length)],
+        budget: null,
       };
 
   const {
@@ -43,7 +49,7 @@ export function CategoryForm({ category, onSuccess, onCancel }: CategoryFormProp
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<CategoryFormData>({
-    resolver: zodResolver(categorySchema),
+    resolver: zodResolver(categorySchema) as any,
     defaultValues,
   });
 
@@ -61,13 +67,19 @@ export function CategoryForm({ category, onSuccess, onCancel }: CategoryFormProp
         }
       }
 
+      // Convert empty budget strings to null to avoid type issues
+      const cleanData: CategoryFormData = {
+        ...data,
+        budget: data.budget || null,
+      };
+
       let id: string;
       if (category) {
-        await updateCategory(category.id, data);
+        await updateCategory(category.id, cleanData);
         id = category.id;
         toast.success("Category updated");
       } else {
-        id = await addCategory(data);
+        id = await addCategory(cleanData);
         toast.success("Category created");
       }
       onSuccess?.(id);
@@ -83,6 +95,20 @@ export function CategoryForm({ category, onSuccess, onCancel }: CategoryFormProp
         <Label htmlFor="name">Name</Label>
         <Input id="name" placeholder="Category name" {...register("name")} autoFocus />
         {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+      </div>
+
+      {/* Monthly Budget */}
+      <div className="space-y-2">
+        <Label htmlFor="budget">Monthly Budget (Optional)</Label>
+        <Input 
+          id="budget" 
+          type="number" 
+          step="0.01" 
+          placeholder="e.g. 500" 
+          {...register("budget", { valueAsNumber: true })} 
+        />
+        {errors.budget && <p className="text-sm text-destructive">{errors.budget.message}</p>}
+        <p className="text-xs text-muted-foreground">Leave empty for no budget limit</p>
       </div>
 
       {/* Icon Picker */}
