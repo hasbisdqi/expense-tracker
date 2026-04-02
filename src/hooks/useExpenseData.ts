@@ -1,11 +1,12 @@
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, getAllExpenses, getAllCategories, getAllTags } from "@/db/expenseTrackerDb";
+import { db, getAllExpenses, getAllCategories, getAllTags, getAllBudgets } from "@/db/expenseTrackerDb";
 import {
   Expense,
   ExpenseFilters,
   AnalysisSummary,
   CategorySummary,
   DailySummary,
+  Budget
 } from "@/types/expense";
 import { useMemo } from "react";
 import {
@@ -39,6 +40,11 @@ export function useTags() {
 export function useCategory(id: string | undefined) {
   const category = useLiveQuery(() => (id ? db.categories.get(id) : undefined), [id], undefined);
   return category;
+}
+
+export function useBudgets() {
+  const budgets = useLiveQuery(() => getAllBudgets(), [], []);
+  return budgets || [];
 }
 
 export function useExpense(id: string | undefined) {
@@ -270,81 +276,97 @@ export function getDateRangeForPeriod(
   }
 }
 
-export interface CategoryBudgetSummary {
-  categoryId: string;
-  categoryName: string;
-  totalBudget: number;
+export interface BudgetProgress {
+  period: "daily" | "weekly" | "monthly" | "yearly";
   spent: number;
+  limit: number;
   remaining: number;
   percentageUsed: number;
   isWarning: boolean;
   isOverBudget: boolean;
-  period: "daily" | "weekly" | "monthly" | "yearly";
 }
 
-export function useCategoryBudgets(accountId?: string): Record<string, CategoryBudgetSummary> {
-  const categories = useCategories();
+export interface BudgetCalculations {
+  budgetId: string;
+  name: string;
+  icon: string;
+  color: string;
+  categoryIds: string[];
+  progress: BudgetProgress[];
+}
+
+export function useBudgetCalculations(accountId?: string): BudgetCalculations[] {
+  const budgets = useBudgets();
   const expenses = useExpenses();
 
   return useMemo(() => {
     const now = new Date();
     
-    const bounds: Record<string, {start: Date, end: Date}> = {
+    const bounds = {
       daily: { start: startOfDay(now), end: endOfDay(now) },
       weekly: { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) },
       monthly: { start: startOfMonth(now), end: endOfMonth(now) },
       yearly: { start: startOfYear(now), end: endOfYear(now) },
     };
 
-    const catBounds: Record<string, {start: Date, end: Date}> = {};
-    for (const category of categories) {
-       const period = category.budgetPeriod || "monthly";
-       catBounds[category.id] = bounds[period];
-    }
+    const results: BudgetCalculations[] = [];
     
-    // Group expenses by category
-    const categorySpent: Record<string, number> = {};
-    
-    for (const expense of expenses) {
-      if (accountId && expense.accountId !== accountId && expense.toAccountId !== accountId) {
-        continue;
-      }
-
-      if (expense.type && expense.type !== "expense") {
-        continue;
-      }
+    for (const budget of budgets) {
+      const progress: BudgetProgress[] = [];
+      const catIds = new Set(budget.categoryIds);
       
-      const boundsForCat = catBounds[expense.category];
-      if (!boundsForCat) continue;
-      
-      const expenseDate = parseISO(expense.date);
-      if (isWithinInterval(expenseDate, { start: boundsForCat.start, end: boundsForCat.end })) {
-        categorySpent[expense.category] = (categorySpent[expense.category] || 0) + expense.value;
-      }
-    }
+      const relevantExpenses = expenses.filter(expense => {
+        if (accountId && expense.accountId !== accountId && expense.toAccountId !== accountId) return false;
+        if (expense.type && expense.type !== "expense") return false;
+        return catIds.has(expense.category);
+      });
 
-    const result: Record<string, CategoryBudgetSummary> = {};
-    
-    for (const category of categories) {
-      if (category.budget && category.budget > 0) {
-        const spent = categorySpent[category.id] || 0;
-        const remaining = category.budget - spent;
-        const percentageUsed = (spent / category.budget) * 100;
+      const calculateProgress = (period: "daily" | "weekly" | "monthly" | "yearly", limit: number) => {
+        const periodBounds = bounds[period];
+        let spent = 0;
         
-        result[category.id] = {
-          categoryId: category.id,
-          categoryName: category.name,
-          totalBudget: category.budget,
+        for (const expense of relevantExpenses) {
+          const expenseDate = parseISO(expense.date);
+          if (isWithinInterval(expenseDate, { start: periodBounds.start, end: periodBounds.end })) {
+             spent += expense.value;
+          }
+        }
+        
+        const remaining = limit - spent;
+        return {
+          period,
+          limit,
           spent,
           remaining,
-          percentageUsed,
-          isWarning: remaining > 0 && remaining < category.budget * 0.2,
-          isOverBudget: remaining < 0,
-          period: category.budgetPeriod || "monthly",
+          percentageUsed: (spent / limit) * 100,
+          isWarning: remaining > 0 && remaining < limit * 0.2,
+          isOverBudget: remaining < 0
         };
+      };
+
+      if (budget.dailyAmount && budget.dailyAmount > 0) {
+        progress.push(calculateProgress("daily", budget.dailyAmount));
       }
+      if (budget.weeklyAmount && budget.weeklyAmount > 0) {
+        progress.push(calculateProgress("weekly", budget.weeklyAmount));
+      }
+      if (budget.monthlyAmount && budget.monthlyAmount > 0) {
+        progress.push(calculateProgress("monthly", budget.monthlyAmount));
+      }
+      if (budget.yearlyAmount && budget.yearlyAmount > 0) {
+        progress.push(calculateProgress("yearly", budget.yearlyAmount));
+      }
+
+      results.push({
+        budgetId: budget.id,
+        name: budget.name,
+        icon: budget.icon,
+        color: budget.color,
+        categoryIds: budget.categoryIds,
+        progress
+      });
     }
 
-    return result;
-  }, [categories, expenses, accountId]);
+    return results;
+  }, [budgets, expenses, accountId]);
 }

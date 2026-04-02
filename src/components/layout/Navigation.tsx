@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink as RouterNavLink, useLocation, useNavigate } from "react-router";
-import { Home, FolderOpen, BarChart3, Settings, Plus, Wallet, LayoutGrid, List, Menu } from "lucide-react";
+import { Home, FolderOpen, BarChart3, Settings, Plus, Wallet, LayoutGrid, List, Menu, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LazyMotion, domAnimation, m } from "framer-motion";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -20,6 +20,7 @@ const sidebarNavItems = [
   { path: "/accounts", icon: Wallet, label: "Accounts" },
   { path: "/categories", icon: LayoutGrid, label: "Categories" },
   { path: "/analysis", icon: BarChart3, label: "Analysis", key: "A" },
+  { path: "/budgets", icon: Target, label: "Budgets", key: "B" },
   { path: "/transactions", icon: List, label: "Transactions", key: "T" },
   { path: "/settings", icon: Settings, label: "Settings", key: "S" },
 ];
@@ -111,6 +112,7 @@ export function BottomNav() {
               </SheetHeader>
               <div className="grid grid-cols-4 gap-4 pb-4">
                 <MoreLink to="/categories" icon={LayoutGrid} label="Categories" />
+                <MoreLink to="/budgets" icon={Target} label="Budgets" />
                 <MoreLink to="/transactions" icon={List} label="Transactions" />
                 <MoreLink to="/settings" icon={Settings} label="Settings" />
               </div>

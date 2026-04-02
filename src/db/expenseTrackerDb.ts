@@ -1,5 +1,5 @@
 import Dexie, { Table } from "dexie";
-import { Expense, Category, TagMetadata, Account, SyncQueueItem } from "@/types/expense";
+import { Expense, Category, TagMetadata, Account, SyncQueueItem, Budget } from "@/types/expense";
 import { v4 as uuidv4 } from "uuid";
 import { supabase } from "@/lib/supabase";
 import { toSupabase, processSyncQueue } from "./sync";
@@ -65,6 +65,7 @@ class ExpenseDatabase extends Dexie {
   categories!: Table<Category, string>;
   tagMetadata!: Table<TagMetadata, string>;
   accounts!: Table<Account, string>;
+  budgets!: Table<Budget, string>;
   sync_queue!: Table<SyncQueueItem, string>;
 
   constructor() {
@@ -129,6 +130,11 @@ class ExpenseDatabase extends Dexie {
       categories: "id, name, updatedAt",
       accounts: "id, name, updatedAt",
     });
+
+    // Version 6: budgets and removed budgets from categories
+    this.version(6).stores({
+      budgets: "id, name, updatedAt",
+    });
   }
 }
 
@@ -170,7 +176,7 @@ export async function initializeDatabase(): Promise<void> {
 }
 
 export async function linkDataToUser(userId: string): Promise<void> {
-  await db.transaction("rw", [db.expenses, db.categories, db.accounts], async () => {
+  await db.transaction("rw", [db.expenses, db.categories, db.accounts, db.budgets], async () => {
     await db.accounts.toCollection().modify((acc) => {
       if (!acc.user_id) acc.user_id = userId;
     });
@@ -179,6 +185,9 @@ export async function linkDataToUser(userId: string): Promise<void> {
     });
     await db.expenses.toCollection().modify((exp) => {
       if (!exp.user_id) exp.user_id = userId;
+    });
+    await db.budgets.toCollection().modify((budget) => {
+      if (!budget.user_id) budget.user_id = userId;
     });
   });
 }
@@ -352,6 +361,44 @@ export async function getCategoryByName(name: string): Promise<Category | undefi
   return db.categories.where("name").equals(name).first();
 }
 
+// Budget CRUD operations
+export async function addBudget(budget: Omit<Budget, "id" | "createdAt" | "updatedAt">): Promise<string> {
+  const id = uuidv4();
+  const now = new Date().toISOString();
+  const newBudget: Budget = { ...budget, id, createdAt: now, updatedAt: now };
+
+  await executeOnlineFirst("insert", "budgets", id, newBudget);
+  await db.budgets.add(newBudget);
+
+  return id;
+}
+
+export async function updateBudget(
+  id: string,
+  updates: Partial<Omit<Budget, "id" | "createdAt">>,
+): Promise<void> {
+  const existing = await db.budgets.get(id);
+  if (!existing) throw new Error("Budget not found");
+  const now = new Date().toISOString();
+
+  const updatedBudget = { ...existing, ...updates, updatedAt: now };
+  await executeOnlineFirst("update", "budgets", id, updatedBudget);
+  await db.budgets.update(id, { ...updates, updatedAt: now });
+}
+
+export async function deleteBudget(id: string): Promise<void> {
+  await executeOnlineFirst("delete", "budgets", id);
+  await db.budgets.delete(id);
+}
+
+export async function getBudget(id: string): Promise<Budget | undefined> {
+  return db.budgets.get(id);
+}
+
+export async function getAllBudgets(): Promise<Budget[]> {
+  return db.budgets.toArray();
+}
+
 // Account CRUD operations
 export async function addAccount(account: Omit<Account, "id" | "createdAt">): Promise<string> {
   const id = uuidv4();
@@ -521,11 +568,13 @@ export async function exportAllData(): Promise<{
   expenses: Expense[];
   categories: Category[];
   accounts: Account[];
+  budgets?: Budget[];
 }> {
   const expenses = await db.expenses.toArray();
   const categories = await db.categories.toArray();
   const accounts = await db.accounts.toArray();
-  return { expenses, categories, accounts };
+  const budgets = await db.budgets.toArray();
+  return { expenses, categories, accounts, budgets };
 }
 
 // Import data
@@ -533,16 +582,23 @@ export async function importData(data: {
   expenses: Expense[];
   categories: Category[];
   accounts?: Account[];
+  budgets?: Budget[];
 }): Promise<void> {
-  await db.transaction("rw", [db.expenses, db.categories, db.tagMetadata, db.accounts], async () => {
+  await db.transaction("rw", [db.expenses, db.categories, db.tagMetadata, db.accounts, db.budgets], async () => {
     // Clear existing data
     await db.expenses.clear();
     await db.categories.clear();
     await db.tagMetadata.clear();
     await db.accounts.clear();
+    await db.budgets.clear();
 
     // Import categories
     await db.categories.bulkAdd(data.categories);
+
+    // Import budgets
+    if (data.budgets && data.budgets.length > 0) {
+      await db.budgets.bulkAdd(data.budgets);
+    }
 
     // Import accounts
     if (data.accounts && data.accounts.length > 0) {

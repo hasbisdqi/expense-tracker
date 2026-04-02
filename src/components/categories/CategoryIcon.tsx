@@ -110,7 +110,7 @@ interface IconPickerProps {
 
 export function IconPicker({ value, onChange, color }: IconPickerProps) {
   return (
-    <div className="grid grid-cols-8 gap-1.5 max-h-48 overflow-y-auto p-2 bg-muted/30 rounded-lg">
+    <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto p-2 bg-muted/30 rounded-lg">
       {AVAILABLE_ICONS.map((iconName) => {
         const IconComponent = icons[iconName as keyof typeof icons] as LucideIcon | undefined;
         if (!IconComponent) return null;

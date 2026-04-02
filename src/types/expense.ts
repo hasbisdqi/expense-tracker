@@ -36,9 +36,22 @@ export interface Category {
   icon: string; // Lucide icon name
   color: string; // Hex color code
   isDefault?: boolean; // Cannot delete default categories
-  budget?: number;
-  budgetPeriod?: "daily" | "weekly" | "monthly" | "yearly";
   createdAt: string;
+}
+
+export interface Budget {
+  id: string;
+  user_id?: string;
+  name: string;
+  categoryIds: string[]; // List of category IDs
+  dailyAmount?: number;
+  weeklyAmount?: number;
+  monthlyAmount?: number;
+  yearlyAmount?: number;
+  icon: string;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SyncQueueItem {
@@ -81,8 +94,17 @@ export interface CategoryFormData {
   name: string;
   icon: string;
   color: string;
-  budget?: number | null;
-  budgetPeriod?: "daily" | "weekly" | "monthly" | "yearly" | null;
+}
+
+export interface BudgetFormData {
+  name: string;
+  categoryIds: string[];
+  dailyAmount?: number | null;
+  weeklyAmount?: number | null;
+  monthlyAmount?: number | null;
+  yearlyAmount?: number | null;
+  icon: string;
+  color: string;
 }
 
 // Filter types

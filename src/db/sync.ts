@@ -4,7 +4,7 @@ import { SyncQueueItem } from "@/types/expense";
 import { v4 as uuidv4 } from "uuid";
 
 let isSyncing = false;
-const SYNCABLE_TABLES = ["expenses", "categories", "accounts"];
+const SYNCABLE_TABLES = ["expenses", "categories", "accounts", "budgets"];
 
 import Dexie from "dexie";
 
@@ -18,10 +18,23 @@ export function toSupabase(table: string, obj: any, userId: string) {
       icon: obj.icon,
       color: obj.color,
       is_default: obj.isDefault || false,
-      budget: obj.budget || null,
-      budget_period: obj.budgetPeriod || null,
       created_at: obj.createdAt,
       updated_at: obj.updatedAt || new Date().toISOString()
+    };
+  } else if (table === "budgets") {
+    return {
+      id: obj.id,
+      user_id: obj.user_id || userId,
+      name: obj.name,
+      categoryIds: obj.categoryIds || [],
+      dailyAmount: obj.dailyAmount || null,
+      weeklyAmount: obj.weeklyAmount || null,
+      monthlyAmount: obj.monthlyAmount || null,
+      yearlyAmount: obj.yearlyAmount || null,
+      icon: obj.icon || "Wallet",
+      color: obj.color || "#3B82F6",
+      createdAt: obj.createdAt,
+      updatedAt: obj.updatedAt || new Date().toISOString()
     };
   } else if (table === "expenses") {
     return {
@@ -55,10 +68,23 @@ export function fromSupabase(table: string, obj: any) {
       icon: obj.icon,
       color: obj.color,
       isDefault: obj.is_default,
-      budget: obj.budget || undefined,
-      budgetPeriod: obj.budget_period || undefined,
       createdAt: obj.created_at,
       updatedAt: obj.updated_at || obj.created_at
+    };
+  } else if (table === "budgets") {
+    return {
+      id: obj.id,
+      user_id: obj.user_id,
+      name: obj.name,
+      categoryIds: obj.categoryIds || [],
+      dailyAmount: obj.dailyAmount || undefined,
+      weeklyAmount: obj.weeklyAmount || undefined,
+      monthlyAmount: obj.monthlyAmount || undefined,
+      yearlyAmount: obj.yearlyAmount || undefined,
+      icon: obj.icon,
+      color: obj.color,
+      createdAt: obj.createdAt,
+      updatedAt: obj.updatedAt || obj.createdAt
     };
   } else if (table === "expenses") {
     return {

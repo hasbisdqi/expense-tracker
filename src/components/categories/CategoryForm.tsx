@@ -17,23 +17,17 @@ import { IconPicker } from "@/components/categories/CategoryIcon";
 import { ColorPicker } from "@/components/categories/ColorPicker";
 import { CATEGORY_COLORS } from "@/db/expenseTrackerDb";
 import { toast } from "sonner";
-import CurrencyInput from "../ui/currency-input";
-import { useCurrency } from "@/contexts/CurrencyContext";
+
 import { useHotkeys } from "@/hooks/use-hotkeys";
 
 const categorySchema = z.object({
   name: z.string().min(1, "Name required").max(30, "Max 30 characters"),
   icon: z.string().min(1, "Icon required"),
   color: z.string().min(1, "Color required"),
-  budget: z.preprocess((val) => {
-    if (val === "" || val === null || val === undefined) return null;
-    return Number(val);
-  }, z.number().min(0, "Must be positive").nullable().optional()),
-  budgetPeriod: z.enum(["daily", "weekly", "monthly", "yearly"]).nullable().optional(),
 });
 
 interface CategoryFormProps {
-  category?: { id: string; name: string; icon: string; color: string; budget?: number; budgetPeriod?: "daily" | "weekly" | "monthly" | "yearly" };
+  category?: { id: string; name: string; icon: string; color: string };
   onSuccess?: (id: string) => void;
   onCancel?: () => void;
 }
@@ -44,15 +38,11 @@ export function CategoryForm({ category, onSuccess, onCancel }: CategoryFormProp
       name: category.name,
       icon: category.icon,
       color: category.color,
-      budget: category.budget || null,
-      budgetPeriod: category.budgetPeriod || "monthly",
     }
     : {
       name: "",
       icon: "Tag",
       color: CATEGORY_COLORS[Math.floor(Math.random() * CATEGORY_COLORS.length)],
-      budget: null,
-      budgetPeriod: "monthly",
     };
 
   const {
@@ -68,7 +58,6 @@ export function CategoryForm({ category, onSuccess, onCancel }: CategoryFormProp
 
   const selectedIcon = watch("icon");
   const selectedColor = watch("color");
-  const { currency } = useCurrency();
 
   const onSubmit = async (data: CategoryFormData) => {
     try {
@@ -81,11 +70,8 @@ export function CategoryForm({ category, onSuccess, onCancel }: CategoryFormProp
         }
       }
 
-      // Convert empty budget strings to null to avoid type issues
       const cleanData: CategoryFormData = {
         ...data,
-        budget: data.budget || null,
-        budgetPeriod: data.budgetPeriod || "monthly",
       };
 
       let id: string;
@@ -118,35 +104,7 @@ export function CategoryForm({ category, onSuccess, onCancel }: CategoryFormProp
         {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
       </div>
 
-      {/* Budget */}
-      <div className="grid grid-cols-2 gap-4">
-        <CurrencyInput
-          label="Budget Limit (Optional)"
-          name="budget"
-          setValue={setValue}
-          currency={currency}
-          value={watch("budget")}
-          error={errors.budget?.message}
-        />
 
-        <div className="space-y-2">
-          <Label>Budget Period</Label>
-          <Select
-            value={watch("budgetPeriod") || "monthly"}
-            onValueChange={(val: any) => setValue("budgetPeriod", val)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select period" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="daily">Daily</SelectItem>
-              <SelectItem value="weekly">Weekly</SelectItem>
-              <SelectItem value="monthly">Monthly</SelectItem>
-              <SelectItem value="yearly">Yearly</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
 
       {/* Icon Picker */}
       <div className="space-y-2">

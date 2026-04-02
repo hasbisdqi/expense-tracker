@@ -27,6 +27,7 @@ import Loading from "./components/ui/loading";
 const AddExpensePage = lazy(() => import("@/pages/AddExpensePage"));
 const AccountsPage = lazy(() => import("@/pages/AccountsPage"));
 const CategoriesPage = lazy(() => import("@/pages/CategoriesPage"));
+const BudgetsPage = lazy(() => import("@/pages/BudgetsPage"));
 const AnalysisPage = lazy(() => import("@/pages/AnalysisPage"));
 const EditExpensePage = lazy(() => import("@/pages/EditExpensePage"));
 
@@ -74,6 +75,7 @@ function AppContent() {
         <Route path="/add" element={<AddExpensePage />} />
         <Route path="/accounts" element={<AccountsPage />} />
         <Route path="/categories" element={<CategoriesPage />} />
+        <Route path="/budgets" element={<BudgetsPage />} />
         <Route path="/analysis" element={<AnalysisPage />} />
         <Route path="/transactions" element={<TransactionsPage />} />
         <Route path="/expense/:id" element={<EditExpensePage />} />
