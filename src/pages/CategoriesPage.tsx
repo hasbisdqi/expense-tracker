@@ -28,7 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CategoryIcon } from "@/components/categories/CategoryIcon";
 import { CategoryForm } from "@/components/categories/CategoryForm";
 import { TagTab } from "@/components/categories/TagTab";
-import { useCategories, useCategoryExpenseCounts, useCategoryBudgets } from "@/hooks/useExpenseData";
+import { useCategories, useCategoryExpenseCounts } from "@/hooks/useExpenseData";
 import { deleteCategory } from "@/db/expenseTrackerDb";
 import { Category } from "@/types/expense";
 import { cn } from "@/lib/utils";
@@ -38,7 +38,6 @@ export default function CategoriesPage() {
   const navigate = useNavigate();
   const categories = useCategories();
   const expenseCounts = useCategoryExpenseCounts();
-  const categoryBudgets = useCategoryBudgets();
   const { currency, formatValue } = useCurrency();
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -129,34 +128,6 @@ export default function CategoriesPage() {
                       <p className="text-sm text-muted-foreground">
                         {expenseCounts[category.id] || 0} transactions
                       </p>
-
-                      {categoryBudgets[category.id] && (
-                        <div className="mt-2 space-y-1">
-                          <div className="flex flex-col justify-between text-xs font-medium">
-                            <span className={cn(
-                              categoryBudgets[category.id].isOverBudget ? "text-destructive" :
-                                categoryBudgets[category.id].isWarning ? "text-orange-500" : "text-muted-foreground"
-                            )}>
-                              {currency.symbol}{formatValue(categoryBudgets[category.id].spent)} / {currency.symbol}{formatValue(categoryBudgets[category.id].totalBudget)} ({categoryBudgets[category.id].period.charAt(0).toUpperCase() + categoryBudgets[category.id].period.slice(1)})
-                            </span>
-                            <span className="text-muted-foreground">
-                              {categoryBudgets[category.id].isOverBudget
-                                ? `Over by ${currency.symbol}${formatValue(Math.abs(categoryBudgets[category.id].remaining))}`
-                                : `${Math.min(100, categoryBudgets[category.id].percentageUsed).toFixed(0)}%`}
-                            </span>
-                          </div>
-                          <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-                            <div
-                              className={cn(
-                                "h-full rounded-full transition-all duration-500",
-                                categoryBudgets[category.id].isOverBudget ? "bg-destructive" :
-                                  categoryBudgets[category.id].isWarning ? "bg-orange-500" : "bg-primary"
-                              )}
-                              style={{ width: `${Math.min(100, Math.max(0, categoryBudgets[category.id].percentageUsed))}%`, backgroundColor: (!categoryBudgets[category.id].isOverBudget && !categoryBudgets[category.id].isWarning) ? category.color : undefined }}
-                            />
-                          </div>
-                        </div>
-                      )}
                     </div>
 
                     <div className="flex items-center gap-1">
